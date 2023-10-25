@@ -1,0 +1,16 @@
+Simulation study explanation of scripts:
+
+Multi_Omics_Simulator.py: This contains the function for generating a multi-omics dataset based on a groundtruth factor structure
+
+Simulation_Loop.py: This imports Multi_Omics_Simulator.py, and then simulates a specified number of multi-omics datasets for a given simulation configuration. The configurations and the number of simulated datasets is set by the user
+
+FeatureVarsEval.Rmd: This loops through each simulated multi-omics data set for a given simulation configuration. For each dataset it checks the featurewise variance and outputs a file with the variance for each feature, as well as a file with rankings based on the variance. It does this for the learning dataset and the target dataset.
+
+FactorVarsEval.Rmd: This loops though each simulation instance for a given configuration. It calculates the number of active factors underlying learning and target datasets and outputs a fies with the active factor count by simulation instance number
+
+
+FctrznMOFA_ActiveK.py: This loops through each simulation instance of a given configuration and factorizes either the learning or target dataset with MOFA. The user specifies which dataset to factorize. The factorization result is ouptutted to a named folder
+
+
+Lrn_Intcpt_MLE.Rmd: This loops through simulation configurations and simulation instances. For each learning dataset it estimates an intercept for the corresponding MOFA factorization so that an intercept can be used in transfer learning.
+

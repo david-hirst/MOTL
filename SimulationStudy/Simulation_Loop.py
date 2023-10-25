@@ -46,10 +46,10 @@ sim_meta_out = os.path.join(ConfigDir,"sim_meta.json")
 ##### set the simulation parameters
 #####
 
-Sims = 2
+Sims = 3
 
-CLrn = 40 
-CLrnNPool = [10,25,40] 
+CLrn = 20 
+CLrnNPool = [10,20,30] 
 CTrg = 2 
 CTrgN = 5
 K = 20 
@@ -58,7 +58,7 @@ ZSdRange = [1,1]
 ZMuShift = [-2,2] 
 ZShiftP = 1/4
 
-D = [2000, 2000, 2000] 
+D = [500, 500, 500] 
 YDists = ["Poisson", "Normal", "Bernoulli"]
 
 

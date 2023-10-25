@@ -1,0 +1,197 @@
+---
+title: "Lrn Incercept MLE"
+output: html_document
+---
+
+Point to correct package library - required on my computer due to R upgrade
+
+```{r}
+.libPaths("/home/david/R/x86_64-pc-linux-gnu-library/4.2")
+```
+
+The purpose of this script is to:
+Import MOFA model inferred from learning set
+Extract or calculate learning set intercepts
+For Guassian data the intercepts are available from the MOFA model
+For other data they are calculated with MLE
+
+```{r}
+library(ggplot2)
+library(MOFA2)
+library(rhdf5)
+library(rjson)
+```
+
+Specify which simulation and factorization configurations to import
+The script loops through the configurations and within each configuration it loops through the simulation instances.
+
+```{r}
+BaseDir = getwd() # or change it to somewhere else
+
+Configs = c(
+  "SimConfig1"
+  )
+
+scale_views = 'False'
+center_groups = 'True'
+FactorSelection = 'ActiveK'
+```
+
+Loop through configurations, simulations and learning set factorizations
+As simulation and factorization was done in python the indices start at 0
+
+```{r}
+for (Config in Configs){
+  
+  print(paste0(Config,":",Sys.time()))
+
+  # Specify global paths
+  
+  InputDir = file.path(BaseDir, Config)
+
+  FctrznsDir = file.path(InputDir,
+                         paste0("Fctrzn_Lrn","_scale_",scale_views,"_center_",center_groups,"_",FactorSelection))
+  
+  # Import metadata related to simulations and factorizations
+  
+  SimMeta = fromJSON(file = file.path(InputDir,"sim_meta.json"))
+  M = length(SimMeta$D)
+  Sims = SimMeta$Sims
+  
+  for (sim in 1:Sims-1){
+
+    fit_start_time = Sys.time()
+  
+    # simulation, factorization and transfer learning directories
+    SimDir = file.path(InputDir,"SimData",paste0("sim",sim))
+    FctrznDir = file.path(FctrznsDir,paste0("Fctrzn",sim))
+    
+    # Load the model and information about what features were used in factorization
+    
+    InputModel = file.path(FctrznDir,"Model.hdf5")
+    Fctrzn = load_model(file = InputModel)
+    likelihoods = as.vector(Fctrzn@model_options$likelihoods)
+    
+    ####
+    ## LOOP THROUGH LIKELIHOODS TO EXTRACT OR CALCULATE INTERCEPTS AND SDs
+    ####
+    
+    InterceptsNaive = vector("list")
+    Intercepts = vector("list")
+    InterceptsMethod = vector("list")
+    
+    for (m in 1:M){
+
+      InterceptsMLE = numeric()
+      InterceptsMethodTmp = character()
+      YLrn = t(Fctrzn@data[[m]]$group0)
+      ZWLrn = Fctrzn@expectations$Z$group0 %*% t(Fctrzn@expectations$W[[m]])
+      DLrn = dim(YLrn)[2]
+    
+      if (likelihoods[m]=="gaussian"){
+        
+        ## gaussian intercepts are already available
+        InterceptsNaive[[m]] = as.vector(Fctrzn@intercepts[[m]]$group0)
+        Intercepts[[m]] = InterceptsNaive[[m]]
+        InterceptsMethod[[m]] = rep("Naive",length(Intercepts[[m]]))
+        
+      } else if (likelihoods[m]=="poisson"){
+        
+        ## naive intercept based on approximation to feature means of ZW
+        InterceptsNaive[[m]] = as.vector(log(-1 + exp(colMeans(YLrn))))
+        
+        ## mle estimate of intercept for ZW
+        ## if optimiser fails for a feature will return the naive estimate
+        
+        for (d in 1:DLrn){
+
+          # nLL = function(interceptMLE) -sum(stats::dpois(YLrn[,d], log(1 + exp(ZWLrn[,d]+interceptMLE)), log = TRUE))
+          
+          nLL = function(interceptMLE) -sum(log(
+            stats::dpois(YLrn[,d], log(1 + exp(ZWLrn[,d]+interceptMLE)))[stats::dpois(YLrn[,d], log(1 + exp(ZWLrn[,d]+interceptMLE)))!=0]
+            ))
+          
+          # interceptMLEfit = try(as.vector(stats4::mle(nLL, start=list(interceptMLE=0))@coef[1]))
+          
+          interceptMLEfit = try(as.vector(
+            stats4::mle(nLL, start=list(interceptMLE=InterceptsNaive[[m]][d]))@coef[1]
+            ))
+          
+          if (class(interceptMLEfit)=="try-error"){
+            InterceptsMLE = c(InterceptsMLE,InterceptsNaive[[m]][d])
+            InterceptsMethodTmp = c(InterceptsMethodTmp,"Naive")
+          } else {
+            InterceptsMLE = c(InterceptsMLE,interceptMLEfit)
+            InterceptsMethodTmp = c(InterceptsMethodTmp,"MLE")
+            }
+        }
+        
+        Intercepts[[m]] = InterceptsMLE
+        InterceptsMethod[[m]] = InterceptsMethodTmp
+        
+      } else if (likelihoods[m]=="bernoulli"){
+        
+        ## naive intercept based on approximation to feature means of ZW
+        InterceptsNaive[[m]] = log(
+          as.vector(colMeans(YLrn))/(1-as.vector(colMeans(YLrn)))
+          )
+        
+        ## mle estimate of intercept for ZW
+        ## if optimiser fails for a feature will return the naive estimate
+        
+        for (d in 1:DLrn){
+
+          # nLL = function(interceptMLE) -sum(stats::dbinom(YLrn[,d], size=1, plogis(ZWLrn[,d]+interceptMLE), log = TRUE))
+          
+          nLL = function(interceptMLE) -sum(log(
+            stats::dbinom(YLrn[,d], size=1, plogis(ZWLrn[,d]+interceptMLE))[stats::dbinom(YLrn[,d], size=1, plogis(ZWLrn[,d]+interceptMLE))!=0]
+            ))
+          
+          
+          # interceptMLEfit = try(as.vector(stats4::mle(nLL, start=list(interceptMLE=0))@coef[1]))
+          
+          interceptMLEfit = try(as.vector(
+            stats4::mle(nLL, start=list(interceptMLE=InterceptsNaive[[m]][d]))@coef[1]
+            ))
+          
+          if (class(interceptMLEfit)=="try-error"){
+            InterceptsMLE = c(InterceptsMLE,InterceptsNaive[[m]][d])
+            InterceptsMethodTmp = c(InterceptsMethodTmp,"Naive")
+          } else {
+            InterceptsMLE = c(InterceptsMLE,interceptMLEfit)
+            InterceptsMethodTmp = c(InterceptsMethodTmp,"MLE")
+            }
+        }
+        
+        Intercepts[[m]] = InterceptsMLE
+        InterceptsMethod[[m]] = InterceptsMethodTmp
+        
+      } else {
+        
+        InterceptsNaive[[m]] = numeric()
+        Intercepts[[m]] = numeric()
+        InterceptsMethod[[m]] = character()
+        
+      }
+    }
+    
+    ## save the intercepts in the relevant factorization folder
+    
+    fit_end_time = Sys.time()
+    
+    EstimatedIntercepts = list(
+      InterceptsNaive = InterceptsNaive,
+      Intercepts = Intercepts,
+      InterceptsMethod = InterceptsMethod,
+      likelihoods = likelihoods,
+      fit_start_time = fit_start_time,
+      fit_end_time = fit_end_time
+    )
+    
+    saveRDS(EstimatedIntercepts,file.path(FctrznDir,"EstimatedIntercepts.rds"))
+    
+  }
+}
+```
+
+

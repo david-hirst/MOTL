@@ -1,0 +1,88 @@
+---
+title: "FeatureVarsEval"
+output: html_document
+---
+
+Point to correct package library - required on my computer due to R upgrade
+
+```{r}
+.libPaths("/home/david/R/x86_64-pc-linux-gnu-library/4.2")
+```
+
+The purpose of this script is to rank features in simulated sets based on variance and indicate if any features have zero variance
+
+```{r}
+library(rjson)
+```
+
+Which data to import
+
+```{r}
+BaseDir = getwd() # or change it to somewhere else
+SimConfigDir = file.path(BaseDir, "SimConfig1")
+SimDataDir = file.path(SimConfigDir,"SimData")
+```
+
+Import simulation metadata file
+
+```{r}
+SimMeta = fromJSON(file = file.path(SimConfigDir,"sim_meta.json"))
+M = length(SimMeta$D)
+```
+
+Loop through the data sets and export a file with ranks and indicators for each dataset
+
+```{r}
+for (i in 1:SimMeta$Sims-1){
+  for (m in 1:M-1){
+
+    SimResDir = file.path(SimDataDir,paste0("sim",i))
+    
+    YFile = paste0('Y',m,'.csv')
+    YSim = as.matrix(read.table(file.path(SimResDir,YFile),
+                                header = FALSE, 
+                                sep=","))
+    
+    IfLrnSim = as.vector(read.table(file.path(SimResDir,"IfLrn.csv"),
+                                    header = FALSE, 
+                                    sep=",")$V1)
+    
+    FVarAll = as.vector(apply(YSim,2,var))
+    FVarLrn = as.vector(apply(YSim[IfLrnSim==1,],2,var))
+    FVarTrg = as.vector(apply(YSim[IfLrnSim==0,],2,var))
+    
+    FVarAllRk = rank(FVarAll,ties.method = "first")
+    FVarLrnRk = rank(FVarLrn,ties.method = "first")
+    FVarTrgRk = rank(FVarTrg,ties.method = "first")
+    
+    
+    write.table(FVarAll,file=file.path(SimResDir,paste0("FVarAll",YFile)), 
+                sep=",", row.names = FALSE, col.names = FALSE)
+    
+    write.table(FVarLrn,file=file.path(SimResDir,paste0("FVarLrn",YFile)), 
+                sep=",", row.names = FALSE, col.names = FALSE)
+    
+    write.table(FVarTrg,file=file.path(SimResDir,paste0("FVarTrg",YFile)), 
+                sep=",", row.names = FALSE, col.names = FALSE)
+    
+    
+    write.table(FVarAllRk,file=file.path(SimResDir,paste0("FVarAllRk",YFile)), 
+                sep=",", row.names = FALSE, col.names = FALSE)
+    
+    write.table(FVarLrnRk,file=file.path(SimResDir,paste0("FVarLrnRk",YFile)), 
+                sep=",", row.names = FALSE, col.names = FALSE)
+    
+    write.table(FVarTrgRk,file=file.path(SimResDir,paste0("FVarTrgRk",YFile)), 
+                sep=",", row.names = FALSE, col.names = FALSE)
+    
+  }
+}
+
+```
+
+
+
+
+
+
+
