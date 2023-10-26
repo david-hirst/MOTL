@@ -1,0 +1,351 @@
+---
+title: "FctrznEvaluationCmbnd"
+output: html_document
+---
+
+
+Point to correct package library?
+
+```{r}
+.libPaths("/home/david/R/x86_64-pc-linux-gnu-library/4.2")
+```
+
+
+Import results from various configurations to produce summary plots and tables
+Also there is code at the bottom to check for statistically significant differences in evaluation scores
+
+Required Packages
+
+```{r}
+library(ggplot2)
+library(MOFA2)
+library(rhdf5)
+library(rjson)
+library(gridExtra)
+library(scales)
+library(knitr)
+library(kableExtra)
+library(nlme)
+library(emmeans)
+library(RColorBrewer)
+
+```
+
+Results to import
+
+```{r}
+
+BaseDir = getwd() # or change it to somewhere else
+
+Configs = c(
+  "SimConfig1"
+  )
+
+```
+
+
+Loop and import
+
+```{r}
+sim_metas = vector("list")
+Evaluations = vector("list")
+
+for (i in 1:length(Configs)){
+ 
+  InputDir = file.path(BaseDir, Configs[i])
+  
+  sim_metas[[i]] = fromJSON(file = file.path(InputDir,"sim_meta.json"))
+  
+  Evaluations[[i]] = readRDS(file.path(InputDir,"FctrznEvaluations.rds"))
+  
+}
+
+```
+
+
+Loop and combine metadata with evaluation scores
+and adjust evaluation scores to change NAs to zero
+
+
+```{r}
+
+for (i in 1:length(Configs)){
+
+  n = dim(Evaluations[[i]]$FctrznEvaluation)[1]
+  
+  Evaluations[[i]]$FctrznEvaluation$score_adj = Evaluations[[i]]$FctrznEvaluation$score
+  Evaluations[[i]]$FctrznEvaluation$score_adj[is.na(Evaluations[[i]]$FctrznEvaluation$score_adj)] = 0
+  
+  Evaluations[[i]]$FctrznEvaluation$SimConfig = rep(Configs[i],n)
+  
+  Evaluations[[i]]$FctrznEvaluation$CLrn = rep(sim_metas[[i]]$CLrn,n)
+  Evaluations[[i]]$FctrznEvaluation$CLrnNPool = rep(paste0("{",paste(sim_metas[[i]]$CLrnNPool, collapse=","),"}"),n)
+  Evaluations[[i]]$FctrznEvaluation$K = rep(sim_metas[[i]]$K,n)
+  Evaluations[[i]]$FctrznEvaluation$ZShiftP = rep(sim_metas[[i]]$ZShiftP,n)
+  Evaluations[[i]]$FctrznEvaluation$Zsd = rep(sim_metas[[i]]$ZSdRange[1],n)
+  
+  # Evaluations[[i]]$FctrznEvaluation$D = rep(paste0("{",paste(sim_metas[[i]]$D, collapse=","),"}"),n)
+  
+  Evaluations[[i]]$FctrznEvaluation$D = rep(sim_metas[[i]]$D[1],n)
+  Evaluations[[i]]$FctrznEvaluation$YDists = rep(paste0("{",paste(sim_metas[[i]]$YDists, collapse=","),"}"),n)
+  Evaluations[[i]]$FctrznEvaluation$M = rep(length(sim_metas[[i]]$D),n)
+  
+  Evaluations[[i]]$FctrznEvaluation$pvalueTH = rep(Evaluations[[i]]$pvalueTH,n)
+  
+  Evaluations[[i]] = Evaluations[[i]]$FctrznEvaluation
+  
+}
+
+```
+
+
+Create a single data frame to store the results
+
+```{r}
+EvaluationsDF = do.call(rbind,Evaluations)
+
+## check name sof methods - change any for plotting?
+table(EvaluationsDF$fctrzn_type)
+
+```
+
+Change names if necessary
+
+```{r}
+EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="ProjectR_CS"]="projectR"
+EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="TL_VI"]="MOTL"
+EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Direct_Trg"]="Direct"
+EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Random"]="Random_TL"
+
+table(EvaluationsDF$fctrzn_type)
+```
+
+
+Boxplots for F1 scores - all configs, excluding MCMC scores
+
+```{r}
+PlotScore = "F1"
+
+DFToPlot = EvaluationsDF[EvaluationsDF$score_name==PlotScore 
+                         & EvaluationsDF$fctrzn_type != "Random_TL"
+                         & EvaluationsDF$M == 3
+                         & EvaluationsDF$D==2000
+                         ,]
+
+DFToPlot$fctrzn_grp = DFToPlot$fctrzn_type
+DFToPlot$fctrzn_grp[!is.element(DFToPlot$fctrzn_grp,c("Direct","Random_TL"))]="other"
+
+DFToPlot$fctrzn_grp = as.factor(DFToPlot$fctrzn_grp)
+DFToPlot$fctrzn_type = as.factor(DFToPlot$fctrzn_type)
+DFToPlot$fctrzn_type = relevel(DFToPlot$fctrzn_type, ref = "Direct")
+
+DFToPlot$D = paste0('D: ',DFToPlot$D)
+DFToPlot$K = paste0('K: ',DFToPlot$K)
+DFToPlot$Zsd = paste0('sd: ',format(DFToPlot$Zsd,nsmall=1))
+DFToPlot$CLrn = paste0('Learning Groups: ',DFToPlot$CLrn)
+
+ggplot(DFToPlot, aes(x=fctrzn_type, y=score_adj, fill=fctrzn_grp))+ 
+  ylab(PlotScore) +
+  xlab("") +
+  # geom_violin() +
+  geom_boxplot(outlier.size = 1, outlier.shape = 1, fatten=1) +
+  stat_summary(fun=mean, geom="point", shape=18, color="black", size=2) +
+  facet_grid(K+Zsd~CLrn, scales = 'free_y') +
+  coord_flip()+
+  theme_bw()+
+  theme(
+    axis.title.x = element_text(size=6),
+    axis.text.x = element_text(size=6),
+    axis.text.y = element_text(size=6),
+    strip.text.x = element_text(size=6),
+    strip.text.y = element_text(angle = 0, size=6),
+    legend.position="none",
+    panel.grid.major=element_blank(),
+    panel.grid.minor=element_blank()
+    )+
+  scale_fill_brewer(palette = "Set2")
+ggsave(
+  file.path(BaseDir,paste0(PlotScore,"Plots.pdf")),
+       width = 15, height = 10, units = "cm"
+  )
+```
+
+Scatter plots - Precision vs Recall vs # Inferred positives?
+
+```{r}
+
+DFToScatterPlot = data.frame(
+  M = EvaluationsDF$M,
+  D = EvaluationsDF$D,
+  CLrn = EvaluationsDF$CLrn,
+  K = EvaluationsDF$K,
+  Zsd = EvaluationsDF$Zsd,
+  score_name = EvaluationsDF$score_name,
+  sim_iteration = EvaluationsDF$sim_iteration,
+  fctrzn_type = EvaluationsDF$fctrzn_type,
+  score_adj = EvaluationsDF$score_adj
+)
+
+DFToScatterPlot = DFToScatterPlot[DFToScatterPlot$M == 3
+                                  & EvaluationsDF$D==2000
+                                  & DFToScatterPlot$fctrzn_type != "Random_TL"
+                                  ,]
+
+DFToScatterPlotWide = reshape(
+  DFToScatterPlot,
+  idvar = c("M", "D", "CLrn","K", "Zsd", "fctrzn_type", "sim_iteration"),
+  timevar = "score_name",
+  v.names = "score_adj",
+  direction="wide"
+)
+
+colnames(DFToScatterPlotWide) = stringr::str_replace(colnames(DFToScatterPlotWide),stringr::fixed("score_adj."),"")
+
+## create some factors
+
+DFToScatterPlotWide$fctrzn_type = as.factor(DFToScatterPlotWide$fctrzn_type)
+DFToScatterPlotWide$fctrzn_type = relevel(DFToScatterPlotWide$fctrzn_type, ref = "Direct")
+
+## make more informative for plotting
+
+DFToScatterPlotWide$D = paste0('D: ',DFToScatterPlotWide$D)
+DFToScatterPlotWide$K = paste0('K: ',DFToScatterPlotWide$K)
+DFToScatterPlotWide$Zsd = paste0('Zsd: ',DFToScatterPlotWide$Zsd)
+DFToScatterPlotWide$CLrn = paste0('CLrn: ',DFToScatterPlotWide$CLrn)
+
+## plot
+
+ggplot(DFToScatterPlotWide, 
+       mapping = aes(x=Precision, y=Recall))+ 
+  scale_x_continuous(labels = label_comma(accuracy = 0.2)) +
+  scale_y_continuous(labels = label_comma(accuracy = 0.2)) +
+  geom_point(aes(fill=fctrzn_type, size=Inf_positives), shape = 21, colour = "black") +
+  facet_grid(CLrn~K+Zsd, scales = 'free_y') +
+  theme_bw()+
+  theme(
+    strip.text.y = element_text(angle = 0),
+    panel.grid.major=element_blank(),
+    panel.grid.minor=element_blank()
+    )+
+  scale_fill_brewer(palette = "Set2")
+ggsave(file.path(BaseDir,"AllScoresPlots.png"),
+       width = 20, height = 10, units = "cm")
+
+```
+
+
+Table of median or mean scores
+
+```{r}
+# TableScore = "F1"
+TableScore = "FitSeconds"
+
+SmryStats = do.call(data.frame, 
+                       aggregate(score_adj ~ YDists+D+CLrn+K+Zsd+fctrzn_type, 
+                               EvaluationsDF[EvaluationsDF$score_name==TableScore,],
+                               # FUN = "quantile", probs = 0.5)
+                               FUN = "mean")
+                     )
+
+SmryStatsWide = reshape(
+  SmryStats,
+  idvar = c("YDists", "D", "CLrn","K", "Zsd"),
+  timevar = "fctrzn_type",
+  v.names = "score_adj",
+  direction="wide"
+)
+
+colnames(SmryStatsWide) = 
+  substr(colnames(SmryStatsWide),
+         unlist(gregexpr(pattern = "\\.", text= colnames(SmryStatsWide))) + 1,
+         nchar(colnames(SmryStatsWide)))
+
+SmryStatsWide = SmryStatsWide[
+  order(SmryStatsWide[,1],SmryStatsWide[,2],SmryStatsWide[,3],SmryStatsWide[,4],SmryStatsWide[,5]),
+]
+
+write.table(SmryStatsWide[,-1],
+            file.path(BaseDir,paste0(TableScore,"Table.csv")),
+            quote = FALSE, sep=',', na='', row.names = FALSE, col.names = TRUE)
+## kable table
+
+options(knitr.kable.NA = '')
+
+## code to export table
+
+knitr::kable(SmryStatsWide, 
+             digits=c(0,0,0,0,1,2,2,2,2,2), booktabs = T, row.names=F) %>%
+  kable_styling(full_width = F, 
+                font_size = 12)%>%
+  save_kable(file.path(BaseDir,paste0(TableScore,"Table.png")))
+
+```
+
+
+Fit a gls model with nlme
+
+```{r}
+
+## set up data frame and convert to factors
+
+PlotScore = "F1"
+
+DFToFit = EvaluationsDF[EvaluationsDF$score_name==PlotScore 
+                        & EvaluationsDF$fctrzn_type != "Random_TL"
+                         & EvaluationsDF$M == 3
+                         & EvaluationsDF$D==2000
+                         ,]
+
+
+DFToFit$fctrzn_type = as.factor(DFToFit$fctrzn_type)
+DFToFit$fctrzn_type = relevel(DFToFit$fctrzn_type, ref = "Direct")
+
+DFToFit$CLrn = as.factor(DFToFit$CLrn)
+DFToFit$K = as.factor(DFToFit$K)
+DFToFit$Zsd = as.factor(DFToFit$Zsd)
+DFToFit$D = as.factor(DFToFit$D)
+
+DFToFit$sim_id = as.factor(paste0(DFToFit$SimConfig,"_",DFToFit$sim_iteration))
+DFToFit$SimConfig = as.factor(DFToFit$SimConfig)
+
+DFToFit$score_to_fit = DFToFit$score_adj
+
+
+# check the data frame
+
+# summary(DFToFit)
+
+## fit gls with symmetric compound correlation structure based on simulation id
+
+# FctEval_gls = gls(model = score_to_fit ~ fctrzn_type,
+#                   data = DFToFit,
+#                   correlation = corCompSymm(form = ~1|sim_id)
+#                   )
+
+## or with compound correlation structure and heterogeneity of variance 
+
+FctEval_gls = gls(model = score_to_fit ~ fctrzn_type + SimConfig,
+                  data = DFToFit,
+                  correlation = corCompSymm(form = ~1|sim_id),
+                  weights = varIdent(form = ~1|fctrzn_type)
+                  )
+
+print(FctEval_gls)
+
+## test contrasts with emmans
+
+FctEval_gls_emm = emmeans(FctEval_gls, "fctrzn_type")
+FctEval_gls_ctr = contrast(FctEval_gls_emm, method = "pairwise", adjust = "tukey")
+
+print(FctEval_gls_ctr)
+
+
+```
+
+
+
+
+
+
+
+

@@ -19,3 +19,5 @@ TL_VI.Rmd: this loops through simulation configurations and instances and perfor
 TL_ProjectR.Rmd: this loops through simulation instances and performs transfer learning with projectR
 
 FctrznEvaluation.Rmd: this loops through each simulation configuration, instance and factorization and calculates some evaluation metrics. An rds file is outputted for each simulation configuration
+
+FctrznEvaluationCmbnd.Rmd: this loops through simulation configurations and combines all the factorization evaluation scores into a single data frame. THis is used for plotting and chekcing statistical significance
