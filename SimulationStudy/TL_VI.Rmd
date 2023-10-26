@@ -1,0 +1,638 @@
+---
+title: "TL with Variational Inference"
+output: html_document
+---
+
+```{r}
+.libPaths("/home/david/R/x86_64-pc-linux-gnu-library/4.2")
+```
+
+The purpose of this script is to:
+Import a MOFA model trained on a learning set
+Use variational inference equations to infer sample scores for a small target set
+Factors are dropped during this process
+Z values (scores) are initialised with the mean scores from the learning dataset factorization
+
+The script loops through simulation configurations and instances
+
+Load packages
+
+```{r}
+library(MOFA2)
+library(rhdf5)
+library(rjson)
+```
+
+
+Specify which simulation and factorization configurations to loop through
+
+
+```{r}
+
+BaseDir = getwd() # or change it to somewhere else
+
+Configs = c(
+  "SimConfig1"
+  )
+
+scale_views = 'False'
+center_groups = 'True'
+FactorSelection = 'ActiveK'
+
+CenterTrg = FALSE # Center Trg with own means or use estimated intercepts?
+StartDropFactor = 1 # after which iteration to start dropping factors
+FreqDropFactor = 1 ## how often to drop factors
+DropFactorTH = -100.01 # factor with lowest max variance, that is less than this, is dropped
+minFactors = 900 ## only checks to drop factors if number of factors is more than this
+MinIterations = 2 # as per MOFA with defaults in python, >= 2 (hardcoded floor), exl initial setup
+MaxIterations = 20000
+StartELBO = 1 #which iteration to start checking ELBO on, excl initiation iteration
+FreqELBO = 1 #how often to assess the ELBO
+# mofa convergence: if percentage change vs first elbo less than threshold
+ConvergenceTH = 0.0005 # default for MOFA - fast option
+# must be less than TH for number of checks in a row
+ConvergenceIts = 2 # as per MOFA python defaults
+PoisRateCstnt = 0.0001 ## amount to add to the poison rate function to avoid errors
+LrnSimple = TRUE ## if TRUE then E[W^2] and E[LnTau] are calculated form E[W] and E[Tau] otherwise imported
+
+```
+
+
+Loop through simulations and use VI for transfer learning
+As simulation and factorization was done in python the simulation and dataset numbers start at 0
+
+```{r}
+for (Config in Configs){
+
+  print(paste0(Config,":",Sys.time()))
+  
+  # Specify global paths
+  
+  InputDir = file.path(BaseDir, Config)
+
+  FctrznsDir = file.path(InputDir,
+                         paste0("Fctrzn_Lrn","_scale_",scale_views,"_center_",center_groups,"_",FactorSelection))
+  
+  # output directory for results
+  if (CenterTrg){
+    TLFctrznsDir = file.path(InputDir,
+                         paste0("TL","_scale_",scale_views,"_center_",center_groups,"_",FactorSelection,"_VI_C"))
+  } else{
+    TLFctrznsDir = file.path(InputDir,
+                         paste0("TL","_scale_",scale_views,"_center_",center_groups,"_",FactorSelection,"_VI"))
+  }
+  
+  if (!dir.exists(TLFctrznsDir)){
+    dir.create(TLFctrznsDir)
+  }
+  
+  # Import metadata related to simulations and factorizations
+  
+  SimMeta = fromJSON(file = file.path(InputDir,"sim_meta.json"))
+  M = length(SimMeta$D)
+  YDists = SimMeta$YDists
+  Sims = SimMeta$Sims
+  
+  ## loop through the simulated datasets
+  
+  for (sim in 1:Sims-1){
+
+    # simulation, factorization and transfer learning directories
+    SimDir = file.path(InputDir,"SimData",paste0("sim",sim))
+    FctrznDir = file.path(FctrznsDir,paste0("Fctrzn",sim))
+    TLFctrznDir = file.path(TLFctrznsDir,paste0("TL",sim))
+    if (!dir.exists(TLFctrznDir)){
+      dir.create(TLFctrznDir)
+    }
+    
+    # load feature variances for filtering datasets
+    
+    FVarTrg = vector("list")
+    for (i in 1:M-1){
+      FVarTrg[[i+1]] = as.vector(read.csv(file.path(SimDir,paste0("FVarTrgY",i,".csv")),header = FALSE)$V1)
+    }
+    
+    FVarKp = vector("list")
+    for (i in 1:M-1){
+      FVarKp[[i+1]] = as.vector(read.csv(file.path(FctrznDir,paste0("FVarKp_m",i,"g_0.csv")),header = FALSE)$V1)
+    }
+    
+    # Only include features that were included in the learning set factorization and 
+    # have variance > 0 in the target set
+    
+    TrgKp = vector("list")
+    for (i in 1:M){
+      TrgKp[[i]] = (FVarTrg[[i]] > 0) & (FVarKp[[i]] == 1)
+    }
+    
+    LrnKp = vector("list")
+    for (i in 1:M){
+      LrnKp[[i]] = FVarTrg[[i]][FVarKp[[i]] == 1] > 0
+    }
+    
+    # load simulated data for the target set
+    # filter to include target set samples and features to be retained
+    
+    IfLrn = read.csv(file.path(SimDir,"IfLrn.csv"),header=FALSE)
+    IfLrn = as.vector(IfLrn$V1)
+    
+    SimY = vector("list")
+    for (i in 1:M-1){
+      SimY[[i+1]] = read.csv(file.path(SimDir,paste0("Y",i,".csv")),header = FALSE)
+      SimY[[i+1]] = as.matrix(SimY[[i+1]])
+      SimY[[i+1]] = SimY[[i+1]][IfLrn==0,TrgKp[[i+1]]]
+    }
+    
+  
+    # Load the model and information about what features were used in factorization
+    
+    InputModel = file.path(FctrznDir,"Model.hdf5")
+    Fctrzn = load_model(file = InputModel) 
+    # Inactive factors are removed when importing - This means other imported data is filtered as well
+    likelihoods = as.vector(Fctrzn@model_options$likelihoods)
+    viewsLrn = Fctrzn@data_options$views
+    
+    # load in the expectations for Tau
+    # I have saved these by changing the save code in python
+    Fctrzn@expectations[["Tau"]] <- h5read(InputModel, "expectations/Tau")
+    Fctrzn@expectations[["Tau"]] = Fctrzn@expectations[["Tau"]][
+      match(viewsLrn,names(Fctrzn@expectations[["Tau"]]))
+      ]
+    
+    # load or calculate log(tau) values - only relevent for gaussian data
+    # for this study the log(tau) values have been calculated form tau vlaues which are treated as fized
+    
+    Fctrzn@expectations[["TauLn"]] = vector("list")
+    for (i in 1:M-1){
+      if (likelihoods[i+1]=="gaussian"){
+        if (LrnSimple){
+          Fctrzn@expectations[["TauLn"]][[paste0("view",i)]] = log(
+            Fctrzn@expectations[["Tau"]][[paste0("view",i)]]$group0[,1]
+            )
+        } else {
+          Fctrzn@expectations[["TauLn"]][[paste0("view",i)]] = as.vector(
+            read.csv(file.path(FctrznDir,paste0("TauLn",i,".csv")),header=FALSE)$V1
+            )
+          }
+      } else {
+        Fctrzn@expectations[["TauLn"]][[paste0("view",i)]] = numeric()
+      }
+    }
+    
+    # import or calculateE[W^2] values
+    # I have saved these by changing the save code in python
+    # these were exported as csv files 
+    # factors were ordered in the same way as for other latent variables
+    # if any factors are dropped due to being inactive, they are at the end of the dataset
+    # so can filter based on dimension of W
+    # For this study the W^2 vlaues are calculated form W vlaues which are treated as fixed
+    
+    Fctrzn@expectations[["WSq"]] = vector("list")
+    for (i in 1:M-1){
+      if (LrnSimple){
+        Fctrzn@expectations[["WSq"]][[paste0("view",i)]] = (Fctrzn@expectations[["W"]][[paste0("view",i)]])^2
+      } else {
+        Fctrzn@expectations[["WSq"]][[paste0("view",i)]] = read.csv(
+        file.path(FctrznDir,paste0("WSq",i,".csv")),
+        header=FALSE
+        ) 
+        Fctrzn@expectations[["WSq"]][[paste0("view",i)]] = as.matrix(
+        Fctrzn@expectations[["WSq"]][[paste0("view",i)]]
+        )[,1:dim(Fctrzn@expectations[["W"]][[paste0("view",i)]])[2]]
+      }
+    }
+    
+    
+    # filter the weight matrices from the learning set factorization
+    
+    Fctrzn_Lrn_W = vector("list")
+    for (i in 1:M){
+      Fctrzn_Lrn_W[[i]] = Fctrzn@expectations$W[[i]][LrnKp[[i]],]
+    }
+    Fctrzn_Lrn_W_Ccnt = do.call(rbind,Fctrzn_Lrn_W)
+    
+    # filter the W^2 matrices from the learning set factorization
+    
+    Fctrzn_Lrn_WSq = vector("list")
+    for (i in 1:M){
+      Fctrzn_Lrn_WSq[[i]] = Fctrzn@expectations$WSq[[i]][LrnKp[[i]],]
+    }
+    
+    # filter the Tau matrices from the learning set factorization
+    
+    Fctrzn_Lrn_Tau = vector("list")
+    for (i in 1:M){
+      Fctrzn_Lrn_Tau[[i]] = t(Fctrzn@expectations$Tau[[i]]$group0[LrnKp[[i]],])
+    }
+    
+    # means from the target data for potential centering
+    
+    Trg_Means = vector("list")
+    for (i in 1:M){
+      Trg_Means[[i]] = as.vector(colMeans(SimY[[i]]))
+    }
+    
+    # standardize and concatenate target set
+    # If the option to center is selected then centered data is factorized
+    
+    SimY_Cent = vector("list")
+    
+    for (i in 1:M){
+      SimY_Cent[[i]] = sweep(SimY[[i]],2,Trg_Means[[i]],"-")
+    }
+    
+    ## Initiate Tau from the factorization
+    ## take the average for each feature
+    ## bernoulli data will change with each iteration
+    
+    Tau = vector("list")
+    for (i in 1:M){
+      Tau[[i]] = matrix(colMeans(Fctrzn_Lrn_Tau[[i]]),
+                             nrow = sum(IfLrn==0), 
+                             ncol = dim(Fctrzn_Lrn_Tau[[i]])[2], 
+                             byrow = TRUE)
+    }
+    
+    ## matrix of filtered E[log(Tau)] values 
+    ## only required for gaussian data
+    
+    TauLn = vector("list")
+    for (i in 1:M){
+      if (likelihoods[i]=="gaussian"){
+        TauLn[[i]] = matrix(Fctrzn@expectations[["TauLn"]][[i]][LrnKp[[i]]],
+                            nrow = dim(Tau[[i]])[1], ncol = dim(Tau[[i]])[2],
+                            byrow = TRUE)
+      } else{
+        TauLn[[i]] = numeric()
+      }
+    }
+    
+    ## import the W intercepts if not centering, create vectors containing 0s if centering
+    W_0 = vector("list")
+    if (CenterTrg){
+      for (i in 1:M){
+        W_0[[i]] = LrnKp[[i]][LrnKp[[i]]]*0
+        }
+    } else {
+      EstInts = readRDS(file.path(FctrznDir,"EstimatedIntercepts.rds"))
+      EstInts = EstInts$InterceptsNaive
+      # EstInts = EstInts$Intercepts
+      for (i in 1:M){
+        W_0[[i]] = EstInts[[i]][LrnKp[[i]]]
+        }
+    }
+    
+    ##
+    ## VARIATIONAL UPDATES
+    ##
+    
+    fit_start_time = Sys.time()
+    
+    
+    ## loop to both initialize and update variational distributions and calculate ELBO
+    
+    ## the update order should be Y, ZVar, ZMu, Zeta then Tau
+    ## For non gaussian data zeta values are calculated and used to transform Y
+    ## Tau is taken from the learning factorization or updated depending on the likelihood type
+    ## after which the elbo is calculated
+    
+    ELBO = numeric()
+    convergence_token = 0
+    
+    for (It in 0:MaxIterations){
+      
+      ## Drop factors explaining variance below threshold
+      ## MOFA formula is  
+      # SS = np.square(Y[m][gg, :]).sum()
+      # Res = np.sum((Y[m][gg, :] - Ypred) ** 2.0)
+      # r2[g][m, k] = 1.0 - Res / SS as per paper
+      
+      BegK = dim(Fctrzn_Lrn_W[[1]])[2] 
+      if ((BegK > minFactors) & (It > 1) & (It > StartDropFactor) & (((It-StartDropFactor-1) %% FreqDropFactor) == 0)){
+      
+        SS_tmp = vector("list")
+        for (i in 1:M){
+          SS_tmp[[i]] = sum(
+            (YGauss[[i]] - (matrix(ZMu_0,ncol = 1) %*% t(W_0[[i]])))^2
+            )
+        }
+        
+        var_expl_max = numeric()
+        for (k in 1:dim(ZMu)[2]){
+        
+          var_expl_tmp = numeric()
+          for (i in 1:M){
+            RSS_tmp = sum(
+              (YGauss[[i]] - (cbind(ZMu_0,ZMu[,k]) %*% t(cbind(W_0[[i]],Fctrzn_Lrn_W[[i]][,k]))))^2
+              )
+            var_expl_tmp = c(var_expl_tmp, 1-(RSS_tmp/SS_tmp[[i]]))
+          }
+          var_expl_max = c(var_expl_max, max(var_expl_tmp))
+          
+        }
+        
+        ## drop factor with lowest max variance explained if below the threshold
+        if (min(var_expl_max)<DropFactorTH){
+          
+          fctrs_to_keep = !base::rank(var_expl_max, ties.method = "first")==1
+          Fctrzn_Lrn_W_Ccnt = Fctrzn_Lrn_W_Ccnt[,fctrs_to_keep]
+          ZMu = ZMu[,fctrs_to_keep]
+          ZMuSq = ZMuSq[,fctrs_to_keep]
+          for (i in 1:M){
+            Fctrzn_Lrn_W[[i]] = Fctrzn_Lrn_W[[i]][,fctrs_to_keep]
+            Fctrzn_Lrn_WSq[[i]] = Fctrzn_Lrn_WSq[[i]][,fctrs_to_keep]
+          }
+          
+          ## recalculate some expectations
+          E_ZE_W = vector("list")
+          E_Z_SqE_W_Sq = vector("list")
+          E_ZSqE_WSq = vector("list")
+          E_ZWSq = vector("list")
+          
+          for (i in 1:M){
+       
+            E_ZE_W[[i]] = cbind(ZMu_0,ZMu) %*% t(cbind(W_0[[i]],Fctrzn_Lrn_W[[i]]))
+            
+            E_Z_SqE_W_Sq[[i]] = (cbind(ZMu_0,ZMu)^2) %*% t(cbind(W_0[[i]],Fctrzn_Lrn_W[[i]])^2)
+            E_ZSqE_WSq[[i]] = cbind(ZMu_0^2,ZMuSq) %*% t(cbind(W_0[[i]]^2,Fctrzn_Lrn_WSq[[i]]))
+            
+            E_ZWSq[[i]] = (E_ZE_W[[i]]^2) - E_Z_SqE_W_Sq[[i]] + E_ZSqE_WSq[[i]]
+            
+          }
+        }
+      }
+      
+      ## Zeta values
+      ## used for non-gaussian data
+      ## for poisson Zeta_nd = E[\sum_{k} z_{n,k} w_{d,k}]
+      ## so Zeta = ZMu %*% t(W)
+      ## for bernoulli Zeta_nd = sqrt(E[(\sum_{k} z_{n,k} w_{d,k})^2])
+      if (It>0){
+        Zeta = vector("list")
+        for (i in 1:M){
+          if (likelihoods[i]=="bernoulli"){
+            Zeta[[i]] = sqrt(E_ZWSq[[i]])
+          } else{
+            Zeta[[i]] = E_ZE_W[[i]]
+          }
+        }
+      }
+      
+      ## Update Tau values
+      ## These only change for bernoulli data
+      if (It>0){
+        for (i in 1:M){
+          if (likelihoods[i]=="bernoulli"){
+            Tau[[i]] = (1/2)*(1/Zeta[[i]])*tanh(Zeta[[i]]/2)
+          }
+        }
+      }
+      
+  
+      ## Initialise / update Pseudo Y values - called YGauss here
+      ## for gaussian data this is just the (centered) Y values which are fixed
+      ## for non gaussian these are transformed y values that change after each update of z
+      ## the y pseudo values are centered at each step if the centering option is selected
+      
+      if (It > 0){
+        
+        YGauss = vector("list")
+        for (i in 1:M){
+          
+          if (likelihoods[i]=="poisson"){
+            
+            YGauss[[i]] = Zeta[[i]] - plogis(Zeta[[i]])*(1-SimY[[i]]/(log(1+exp(Zeta[[i]]))+ PoisRateCstnt))/Tau[[i]]
+            if (CenterTrg){
+              YGauss[[i]] = sweep(YGauss[[i]],2,as.vector(colMeans(YGauss[[i]])),"-")
+              }
+            
+          } else if (likelihoods[i]=="bernoulli"){
+            
+            YGauss[[i]] = (2*SimY[[i]] - 1) / (2*Tau[[i]])
+            if (CenterTrg){
+              YGauss[[i]] = sweep(YGauss[[i]],2,as.vector(colMeans(YGauss[[i]])),"-")
+              }
+            
+          } else {
+            
+            YGauss[[i]] = SimY[[i]]
+            if (CenterTrg){
+              YGauss[[i]] = sweep(YGauss[[i]],2,as.vector(colMeans(YGauss[[i]])),"-")
+            }
+            
+          }
+          
+        }
+      
+      }
+      
+      ## Z variances using inialised / updated tau values and W^2 values
+      ## based on the appendix of the mofa paper and Github code
+      
+      ZVar = matrix(0, nrow = sum(IfLrn==0), ncol = dim(Fctrzn_Lrn_W_Ccnt)[2])
+      for (i in 1:M){
+        ZVar_m = Tau[[i]] %*% Fctrzn_Lrn_WSq[[i]]
+        ZVar = ZVar +  ZVar_m
+      }
+      ZVar = 1/(ZVar + 1)
+      
+      ## Initialize / update ZMus values
+      ## Initialize with means from learning dataset factorization
+      ## Then variational updates are used
+      
+      if (It == 0){
+        
+        # initialise with means of learning set Z
+        ZMu = matrix(data=as.vector(colMeans(Fctrzn@expectations$Z$group0)),
+                     nrow = sum(IfLrn==0), ncol = dim(Fctrzn_Lrn_W_Ccnt)[2],
+                     byrow = TRUE)
+        
+        # vector of 1s to act as multiplier of W intercept term
+        ZMu_0 = rep(1,sum(IfLrn==0))
+        
+      } else {
+        
+        # variational updates
+        # I've included an intercept for W - based on estimation from factorization of Y_lrn
+        # this has no impact when the target set is centered
+        
+        for (k in 1:dim(ZMu)[2]){
+      
+          ZMu_tmp = numeric(length=dim(ZMu)[1])
+          
+          for (i in 1:M){
+      
+            ZMu_tmp1 = matrix(Fctrzn_Lrn_W[[i]][,k],
+                              nrow=dim(Tau[[i]])[1],ncol=dim(Tau[[i]])[2],byrow = TRUE)
+            ZMu_tmp1 = Tau[[i]] * ZMu_tmp1
+            
+            ZMu_tmp2 = cbind(ZMu_0,ZMu[,-k]) %*% t(cbind(W_0[[i]],Fctrzn_Lrn_W[[i]][,-k]))
+            ZMu_tmp2 = YGauss[[i]] - ZMu_tmp2
+            
+            ZMu_tmp3 = ZMu_tmp1 * ZMu_tmp2
+            ZMu_tmp3 = rowSums(ZMu_tmp3)
+            
+            ZMu_tmp = ZMu_tmp + ZMu_tmp3
+            
+          }
+          
+          ZMu[,k] = ZMu_tmp*ZVar[,k] #update factor value for subsequent calculation
+        }
+        
+      }
+      
+      ## Z^2 values
+      ## using formula var(X) = E(X^2) - E(X)^2
+      
+      ZMuSq = ZVar + ZMu^2
+      
+      ## Some pre calculations - results used in various parts: E_ZE_W and ZZWW
+      
+      ## E_ZE_W_nd = E[\sum_{k} z_{n,k} w_{d,k}]
+      
+      ## E_ZWSq_nd = E[(\sum_{k} z_{n,k} w_{d,k})^2] = E[\sum_k \sum_j z_{n,k} w_{d,k} z_{n,j} w_{d,j}]
+      ## If A = square(ZMu%*%t(W)) - square(ZMu)%*%square(t(W))
+      ## And B = ZMuSq%*%t(WSq)
+      ## Then A_nd = \sum_{k} \sum_{j != k} E[z_{n,k}]E[w_{n,k}]E[z_{n,j}]E[w_{n,j}]
+      ## And B_nd = \sum_{k} E[(z_{n,k})^2]E[(w_{d,k})^2]
+      ## E_ZWSq_nd = (A + B)_nd = (square(ZMu%*%t(W)) - square(ZMu)%*%square(t(W)) + ZMuSq%*%t(WSq))_nd
+      
+      E_ZE_W = vector("list")
+      E_Z_SqE_W_Sq = vector("list")
+      E_ZSqE_WSq = vector("list")
+      E_ZWSq = vector("list")
+      
+      for (i in 1:M){
+   
+        E_ZE_W[[i]] = cbind(ZMu_0,ZMu) %*% t(cbind(W_0[[i]],Fctrzn_Lrn_W[[i]]))
+        
+        E_Z_SqE_W_Sq[[i]] = (cbind(ZMu_0,ZMu)^2) %*% t(cbind(W_0[[i]],Fctrzn_Lrn_W[[i]])^2)
+        E_ZSqE_WSq[[i]] = cbind(ZMu_0^2,ZMuSq) %*% t(cbind(W_0[[i]]^2,Fctrzn_Lrn_WSq[[i]]))
+        
+        E_ZWSq[[i]] = (E_ZE_W[[i]]^2) - E_Z_SqE_W_Sq[[i]] + E_ZSqE_WSq[[i]]
+        
+      }
+      
+      ## Calculate ELBO
+      
+      if ((It > 0) & (It >= StartELBO) & (((It-StartELBO) %% FreqELBO) == 0)){
+        
+        ### likelihoods
+        ## for poisson and bernoulli it is the bound which is used
+        ## for gaussian it is expanded gaussian log likelihood
+        ## it seems in MOFA they do not allow for the centering that is done for the 
+        ## pseudo data for non gaussian data
+        ## they used the raw uncentered data for the elbo - this seems strange
+        ## although i guess it acts as a lower bound for the lower bound ...
+        
+        ELBO_L = 0
+        
+        for (i in 1:M){
+  
+          if (likelihoods[i]=="poisson"){
+            
+            # b_nd is an upper bound for -log(p(y|x))
+            # b_nd = k_nd/2 * (x_nd - zeta_nd)^2 + (x_nd - zeta_nd)f'(zeta_nd) + f(zeta_nd)
+            # f'(a) = (1/(1+e^(-a)))(1 - y/log(1+e^a))
+            # f(a) = log(1+e^a) - ylog(log(1+e^a))
+            # The elbo component is -b_nd as this is a lower bound for log(p(y|x))
+            
+            ## A constant is added to rate calculations here to avoid errors, as per MOFA code
+  
+            ELBO_L_tmpA = 0.5 * Tau[[i]] * (E_ZWSq[[i]] - 2 * E_ZE_W[[i]] * Zeta[[i]] + Zeta[[i]]^2)
+            ELBO_L_tmpB = (E_ZE_W[[i]] - Zeta[[i]]) * plogis(Zeta[[i]]) * (1 - SimY[[i]]/(log(1+exp(Zeta[[i]]))+ PoisRateCstnt))
+            ELBO_L_tmpC = (log(1+exp(Zeta[[i]]))+ PoisRateCstnt) - SimY[[i]] * log((log(1+exp(Zeta[[i]]))+ PoisRateCstnt))
+  
+            ELBO_L_tmp = -sum(ELBO_L_tmpA + ELBO_L_tmpB + ELBO_L_tmpC)
+  
+          } else if (likelihoods[i]=="bernoulli"){
+            
+            # if g(a) = 1/(1 + e^(-a)) is the logistic (sigmoid) function
+            # h_nd = (2 * y_nd - 1) * x_nd
+            # lambda(a) = tanh(a/2)/(4*a)
+            # b_nd = log(g(zeta_nd)) + (h_nd - zeta_nd)/2 - lambda(zeta_nd)(h_nd^2 - zeta_nd^2)
+            # as tau_nd = 2 * lambda(zeta_nd) this becomes
+            # b_nd = log(g(zeta_nd)) + (h_nd - zeta_nd)/2 - tau_nd/2 * (x_nd^2 - zeta_nd^2)
+  
+            ELBO_L_tmpA = log(plogis(Zeta[[i]]))
+            ELBO_L_tmpB = 0.5 * ((2 * SimY[[i]] - 1) * E_ZE_W[[i]] - Zeta[[i]])
+            ELBO_L_tmpC = 0.5 * Tau[[i]] * (E_ZWSq[[i]] - Zeta[[i]]^2)
+  
+            ELBO_L_tmp = sum(ELBO_L_tmpA + ELBO_L_tmpB - ELBO_L_tmpC)
+  
+          } else {
+            
+            # gaussian log likelihood
+            # log(f(y_nd|x_nd,tau_nd)) = 1/2 * (log(tau_nd) - log(2*pi) - tau_nd * (y_nd - x_nd)^2)
+            ELBO_L_tmpA = TauLn[[i]] - log(2 * pi)
+            ELBO_L_tmpB = Tau[[i]] * (YGauss[[i]]^2 - 2 * YGauss[[i]] * E_ZE_W[[i]] + E_ZWSq[[i]])
+  
+            ELBO_L_tmp = sum(0.5 * (ELBO_L_tmpA - ELBO_L_tmpB))
+          }
+          
+          ELBO_L = ELBO_L + ELBO_L_tmp
+        }
+        
+        ## The ELBO components for the variational and prior distributions for Z
+        
+        ELBO_P = sum(0.5 * (-log(2*pi) - ZMuSq))
+        
+        ELBO_Q = sum(0.5 * (-1 - log(2*pi) - log(ZVar)))
+        
+        ELBO = c(ELBO, ELBO_L + ELBO_P - ELBO_Q)
+        
+        if (length(ELBO)>=2){
+          ELBO_delta = 100*abs((ELBO[length(ELBO)] - ELBO[length(ELBO)-1])/ELBO[1])
+          if ((ELBO_delta < ConvergenceTH)){
+            convergence_token = convergence_token + 1
+          } else {
+            convergence_token = 0
+            }
+        }
+        
+      }
+      
+      # Check convergence to see if updates can be stopped
+      if ((It >= 2) & (It >= MinIterations) & (convergence_token >= ConvergenceIts)){
+        break
+      }
+      
+    
+    }
+    
+    fit_end_time = Sys.time()
+    
+    # export the data used in the fit
+    TL_VI_data = list(
+      "TrgKp" = TrgKp,
+      "Fctrzn_Lrn_W_fltrd" = Fctrzn_Lrn_W,
+      "ZMu" = ZMu,
+      "ELBO" = ELBO,
+      "fit_start_time" = fit_start_time,
+      "fit_end_time" = fit_end_time,
+      "MinIterations" = MinIterations,
+      "MaxIterations" = MaxIterations,
+      'StartELBO' = StartELBO,
+      'FreqELBO' = FreqELBO,
+      "ConvergenceTH" = ConvergenceTH,
+      "ConvergenceIts" = ConvergenceIts,
+      'PoisRateCstnt' = PoisRateCstnt,
+      'LrnSimple' = LrnSimple,
+      "CenterTrg" = CenterTrg,
+      'StartDropFactor' = StartDropFactor,
+      'FreqDropFactor' = FreqDropFactor,
+      'minFactors' = minFactors,
+      "DropFactorTH" = DropFactorTH
+    )
+    
+    saveRDS(TL_VI_data,file.path(TLFctrznDir,"TL_VI_data.rds"))
+    
+  }
+  
+}
+```
+
+
+
+
+
