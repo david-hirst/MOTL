@@ -17,3 +17,5 @@ Lrn_Intcpt_MLE.Rmd: This loops through simulation configurations and simulation 
 TL_VI.Rmd: this loops through simulation configurations and instances and performs transfer learning with variational inference
 
 TL_ProjectR.Rmd: this loops through simulation instances and performs transfer learning with projectR
+
+FctrznEvaluation.Rmd: this loops through each simulation configuration, instance and factorization and calculates some evaluation metrics. An rds file is outputted for each simulation configuration

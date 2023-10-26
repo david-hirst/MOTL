@@ -1,0 +1,403 @@
+---
+title: "FctrznEvaluation"
+output: html_document
+---
+
+
+```{r}
+.libPaths("/home/david/R/x86_64-pc-linux-gnu-library/4.2")
+```
+
+This script is for evaluating factorizations and comparing them with respect to uncovering underlying matrices. It loops through simulation configurations and instances.
+For each configuration it outputs an rds file with evaluation metrics
+
+How to evaluate?
+
+ - test Z scores between target set clusters
+ - identify scores with statistically significant differences
+ - find groundtruth weight vectors that resemble the inferred weight vectors associated with the differentially active scores
+ - are the groundtruth scores associated with these weight vectors actually differentially active?
+ 
+Required Packages
+
+```{r}
+library(ggplot2)
+library(MOFA2)
+library(rhdf5)
+library(rjson)
+library(gridExtra)
+library(scales)
+library(knitr)
+library(kableExtra)
+```
+
+
+ 
+Global specifics for importing
+ 
+```{r}
+Seed = 1234567
+mode(Seed) = 'integer'
+set.seed(Seed)
+
+BaseDir = getwd() # or change it to somewhere else
+
+Configs = c(
+  "SimConfig1"
+  )
+
+scale_views = 'False'
+center_groups = 'True'
+FactorSelection = 'ActiveK'
+
+FctrznMethods = c('Direct_Trg', 'TL_VI', 'ProjectR_CS', 'Random')
+
+FeatWseScl = TRUE ## if TRUE then weight vectors scaled featurewise, otherwise factorwise
+# ScaleW = function(x) {x/max(abs(x),na.rm = TRUE)} ## function for scaling weight vectors
+ScaleW = function(x) {x/norm(matrix(x),type="F")}
+pvalueTH = 0.05 ## THRESHOLD FOR DIFFERENTIALLY ACTIVE
+MltTst = FALSE ## whether to use multiple testing adjustments to p-values - not needed here as using the groundtruth factor score means to check against
+
+CorMethod = "pearson" ## either "pearson" or "spearman" - for correlations between w vectors
+corCutOff = 0.05 ## pvalue threshold for whether a correlation is significant
+
+```
+
+loop through configurations and simulated data sets
+
+```{r}
+for (Config in Configs){
+  
+  print(Config)
+  # Directories for simulated data and different factorization types
+  
+  InputDir = file.path(BaseDir, Config)
+  SimsDir = file.path(InputDir,"SimData")
+
+  # Import metadata related to simulations and factorizations
+  
+  SimMeta = fromJSON(file = file.path(InputDir,"sim_meta.json"))
+  M = length(SimMeta$D)
+  YDists = SimMeta$YDists
+  Sims = SimMeta$Sims
+  CLrn = SimMeta$CLrn
+  CTrgN = SimMeta$CTrgN
+  CTrg1 = (1:(CTrgN*2))<=CTrgN
+  CTrg2 = !CTrg1
+  
+  # set up vectors to store results
+  
+  sim_iteration = integer()
+  fctrzn_type = character()
+  score_name = character()
+  score = numeric()
+  
+  for (sim in 1:Sims-1){
+    
+    # directory for each simulation
+    SimDir = file.path(SimsDir,paste0("sim",sim))
+    
+    # import groundtruth weights
+    WGroundtruth = vector("list")
+    for (m in 1:M-1){
+      WGroundtruth[[m+1]] = as.matrix(read.csv(file.path(SimDir,paste0("W",m,".csv")),header = FALSE))
+    }
+    
+    # import groundtruth clusterwise score means
+    ZGroundtruth = as.matrix(read.csv(file.path(SimDir,paste0("ZMuC.csv")),header = FALSE))
+    ZGroundtruth = ZGroundtruth[1:dim(ZGroundtruth)[1] > CLrn,]
+    
+    ## groundtruth score matrix perturbed scores - between trg set clusters
+      
+    GT_SigFct = as.vector(which(ZGroundtruth[1,]!=ZGroundtruth[2,]))
+    GT_positives = length(GT_SigFct)
+    
+    sim_iteration = c(sim_iteration,sim)
+    fctrzn_type = c(fctrzn_type,"GroundTruth")
+    score_name = c(score_name,"GT_positives")
+    score = c(score,GT_positives)
+    
+    # info about which set the samples belong to
+    IfLrn = read.csv(file.path(SimDir,"IfLrn.csv"),header=FALSE)
+    IfLrn = as.vector(IfLrn$V1)
+    
+    # import data for the Trg Fctrzn and evaluate against ground truth
+    for (fm in FctrznMethods){
+      
+      # set directory for factorization of target and import
+      
+      if (fm=='Direct_Trg'){
+        
+        FctrznsTrgDir = file.path(InputDir,
+                         paste0("Fctrzn_Trg_scale_",scale_views,"_center_",center_groups,"_",FactorSelection))
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("Fctrzn",sim))
+        
+        FctrznTrg = load_model(file = file.path(FctrznTrgDir,"Model.hdf5"))
+        FTrgVarKp = vector("list")
+        for (m in 1:M-1){
+          FTrgVarKp[[m+1]] = as.vector(
+            read.csv(file.path(FctrznTrgDir,paste0("FVarKp_m",m,"g_0.csv")),header = FALSE)$V1
+            )
+        }
+        FctrznTrg_W_Fit = FctrznTrg@expectations$W
+        FctrznTrg_Z = FctrznTrg@expectations$Z$group0
+        FitSeconds = sum(FctrznTrg@training_stats$time)
+        
+      } else if (fm=='Direct_All'){
+        
+        FctrznsTrgDir = file.path(InputDir,
+                           paste0("Fctrzn_All_scale_",
+                                  scale_views,"_center_",center_groups,"_",
+                                  FactorSelection))
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("Fctrzn",sim))
+        
+        FctrznTrg = load_model(file = file.path(FctrznTrgDir,"Model.hdf5"))
+        FTrgVarKp = vector("list")
+        for (m in 1:M-1){
+          FTrgVarKp[[m+1]] = as.vector(
+            read.csv(file.path(FctrznTrgDir,paste0("FVarKp_m",m,"g_0.csv")),header = FALSE)$V1
+            )
+        }
+        FctrznTrg_W_Fit = FctrznTrg@expectations$W
+        FctrznTrg_Z = FctrznTrg@expectations$Z$group0[IfLrn==0,]
+        FitSeconds = sum(FctrznTrg@training_stats$time)
+        
+      } else if (fm=='TL_VI'){
+        
+        FctrznsTrgDir = file.path(InputDir,
+                         paste0("TL","_scale_",
+                                scale_views,"_center_",center_groups,"_",
+                                FactorSelection,"_VI"))
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
+        
+        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_VI_data.rds"))
+        FTrgVarKp = FctrznTrg$TrgKp
+        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
+        FctrznTrg_Z = FctrznTrg$ZMu
+        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
+        
+      } else if (fm=='TL_VI_C'){
+        
+        FctrznsTrgDir = file.path(InputDir,
+                         paste0("TL","_scale_",
+                                scale_views,"_center_",center_groups,"_",
+                                FactorSelection,"_VI_C"))
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
+        
+        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_VI_data.rds"))
+        FTrgVarKp = FctrznTrg$TrgKp
+        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
+        FctrznTrg_Z = FctrznTrg$ZMu
+        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
+        
+      } else if (fm=='ProjectR'){
+        
+        FctrznsTrgDir = file.path(InputDir,
+                         paste0("TL","_scale_",
+                                scale_views,"_center_",center_groups,"_",
+                                FactorSelection,"_ProjectR"))
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
+        
+        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_ProjectR_data.rds"))
+        FTrgVarKp = FctrznTrg$TrgKp
+        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
+        FctrznTrg_Z = t(FctrznTrg$ZProjectR)
+        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
+        
+      } else if (fm=='ProjectR_CS'){
+        
+        FctrznsTrgDir = file.path(InputDir,
+                       paste0("TL","_scale_",
+                              scale_views,"_center_",center_groups,"_",
+                              FactorSelection,"_ProjectR_CS"))
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
+        
+        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_ProjectR_data.rds"))
+        FTrgVarKp = FctrznTrg$TrgKp
+        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
+        FctrznTrg_Z = t(FctrznTrg$ZProjectR)
+        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
+        
+      } else if (fm=='Random'){
+        
+        FctrznsTrgDir = file.path(InputDir,
+                         paste0("TL","_scale_",
+                                scale_views,"_center_",center_groups,"_",
+                                FactorSelection,"_VI"))
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
+        
+        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_VI_data.rds"))
+        FTrgVarKp = FctrznTrg$TrgKp
+        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
+        FctrznTrg$fit_start_time = Sys.time()
+        FctrznTrg_Z = FctrznTrg$ZMu
+        
+        # randomize Z
+        FctrznTrg_Z = matrix(
+          rnorm(length(as.vector(FctrznTrg_Z)),0,1),
+          nrow=dim(FctrznTrg_Z)[1], ncol=dim(FctrznTrg_Z)[2]
+        )
+        
+        FctrznTrg$fit_end_time = Sys.time()
+        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
+        
+      }
+        
+      ## scaled groundtruth weights relevant to target set factorization
+      FctrznTrg_W_GT = vector("list")
+      for (m in 1:M){
+        
+        if (fm=='Random'){
+          FTrgVarKp[[m]] = sample(FTrgVarKp[[m]],length(FTrgVarKp[[m]]),replace = FALSE)
+        }
+        
+        if (FeatWseScl){
+          FctrznTrg_W_GT[[m]] = t(apply(WGroundtruth[[m]][FTrgVarKp[[m]]==1,], 1, ScaleW))
+        } else {
+          FctrznTrg_W_GT[[m]] = apply(WGroundtruth[[m]][FTrgVarKp[[m]]==1,], 2, ScaleW)
+        }
+        FctrznTrg_W_GT[[m]][is.na(FctrznTrg_W_GT[[m]])]=0
+        FctrznTrg_W_GT[[m]] = base::scale(FctrznTrg_W_GT[[m]], center = TRUE, scale = FALSE)
+      }
+      FctrznTrg_W_GT_Ccnt = do.call(rbind,FctrznTrg_W_GT)
+      FctrznTrg_W_GT_Ccnt[is.nan(FctrznTrg_W_GT_Ccnt)] = 0
+      
+      ## scaled weights inferred by target set factorization
+      for (m in 1:M){
+        
+        if (fm=='Random'){
+          FctrznTrg_W_Fit[[m]] = matrix(
+          rnorm(length(as.vector(FctrznTrg_W_Fit[[m]])),0,1),
+          nrow=dim(FctrznTrg_W_Fit[[m]])[1], ncol=dim(FctrznTrg_W_Fit[[m]])[2]
+          )
+        }
+        
+        if (FeatWseScl){
+          FctrznTrg_W_Fit[[m]] = t(apply(FctrznTrg_W_Fit[[m]],1, ScaleW))
+        } else {
+          FctrznTrg_W_Fit[[m]] = apply(FctrznTrg_W_Fit[[m]],2, ScaleW)
+        }
+        FctrznTrg_W_Fit[[m]][is.na(FctrznTrg_W_Fit[[m]])]=0
+        FctrznTrg_W_Fit[[m]] = base::scale(FctrznTrg_W_Fit[[m]], center = TRUE, scale = FALSE)
+      }
+      FctrznTrg_W_Fit_Ccnt = do.call(rbind,FctrznTrg_W_Fit)
+      FctrznTrg_W_Fit_Ccnt[is.nan(FctrznTrg_W_Fit_Ccnt)] = 0
+      
+      #### Check for significant scores from Z matrix
+      
+      FctrznTrg_Z_pv = numeric()
+      for (f in 1:dim(FctrznTrg_Z)[2]){
+        WRSTest = wilcox.test(x=FctrznTrg_Z[CTrg1,f], y = FctrznTrg_Z[CTrg2,f])
+        FctrznTrg_Z_pv = c(FctrznTrg_Z_pv,WRSTest$p.value)
+      }
+      if (MltTst){
+        FctrznTrg_Z_pv = p.adjust(FctrznTrg_Z_pv, method="BH")
+      }
+      
+      #### Find associated weight vectors and predicted factors
+      # for each differently expressed z factor - what is the most correlated groundtruth w factor?
+      
+      FctrznTrg_SigFct = integer()
+      if (sum(FctrznTrg_Z_pv<pvalueTH)==0){
+        FctrznTrg_SigFct = c(FctrznTrg_SigFct,0)
+      } else {
+          for (f in which(FctrznTrg_Z_pv<pvalueTH)){
+            FctrCors = numeric()
+            FctrCorsPVs = numeric()
+            for (fGT in 1:dim(FctrznTrg_W_GT_Ccnt)[2]){
+              FctrCors = c(FctrCors,
+                           cor(x=FctrznTrg_W_Fit_Ccnt[,f], 
+                               y = FctrznTrg_W_GT_Ccnt[,fGT],
+                               method = CorMethod)
+                           )
+              FctrCorsPVs = c(FctrCorsPVs,
+                              cor.test(x=FctrznTrg_W_Fit_Ccnt[,f],
+                                       y = FctrznTrg_W_GT_Ccnt[,fGT],
+                                       alternative = c("two.sided"),
+                                       method = CorMethod)$p.value
+                              )
+              
+            }
+            FctrCors = FctrCors[FctrCorsPVs<corCutOff]
+            if(length(FctrCors)>=1){
+              FctrCorsRks = base::rank(-FctrCors, ties="first")
+              FctrznTrg_SigFct = c(FctrznTrg_SigFct, which(FctrCorsRks == 1))
+            } else {
+              FctrznTrg_SigFct = c(FctrznTrg_SigFct,0)
+            }
+          }
+      }
+      FctrznTrg_SigFct = unique(FctrznTrg_SigFct[FctrznTrg_SigFct>0])
+      
+      ## scores for evaluating the  factorization method
+      
+      Inf_positives = length(FctrznTrg_SigFct)
+      True_positives = sum(is.element(FctrznTrg_SigFct,GT_SigFct))
+      if (Inf_positives==0){
+        Precision=0
+      } else {
+        Precision = True_positives/Inf_positives
+      }
+      if (GT_positives==0){
+        Recall=0
+      } else {
+        Recall = True_positives/GT_positives
+      }
+      if ((Precision+Recall)==0){
+        F1=0
+      } else {
+        F1 = (2*Precision*Recall)/(Precision+Recall)
+      }
+      
+      sim_iteration = c(sim_iteration,rep(sim,6))
+      fctrzn_type = c(fctrzn_type,rep(fm,6))
+      score_name = c(score_name,c("Inf_positives","True_positives","Precision","Recall","F1","FitSeconds"))
+      score = c(score,c(Inf_positives,True_positives,Precision,Recall,F1,FitSeconds))
+      
+      ## remove before replacing
+      rm(list=c('FctrznsTrgDir', 'FctrznTrgDir',
+                'FctrznTrg', 'FTrgVarKp', 'FctrznTrg_W_Fit', 'FctrznTrg_Z', 'FitSeconds'))
+      invisible(gc())
+    
+    }
+    
+    ## remove before replacing
+    rm(list=c('SimDir','WGroundtruth','ZGroundtruth','GT_SigFct','GT_positives','IfLrn'))
+    invisible(gc())
+      
+  }
+  
+  FctrznEvaluation = data.frame(
+    sim_iteration = sim_iteration,
+    fctrzn_type = fctrzn_type,
+    score_name = score_name,
+    score = score)
+  
+  FctrznEvaluationLs = list(
+  "FctrznEvaluation" = FctrznEvaluation,
+  "FctrznMethods" = FctrznMethods,
+  "Seed" = Seed,
+  "pvalueTH" = pvalueTH,
+  "FeatWseScl" = FeatWseScl,
+  "MltTst" = MltTst,
+  "CorMethod" = CorMethod,
+  "corCutOff" = corCutOff
+  )
+
+  # export the data
+  saveRDS(FctrznEvaluationLs,file.path(InputDir,"FctrznEvaluations.rds"))
+  
+  ## remove before replacing
+  rm(list=c('InputDir','SimsDir','SimMeta','M','YDists','Sims','CLrn','CTrgN','CTrg1','CTrg2',
+            'FctrznEvaluation', 'FctrznEvaluationLs'))
+  invisible(gc())
+
+}
+```
+
+
+
+
+
+
+ 
