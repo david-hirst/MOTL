@@ -168,25 +168,29 @@ for s in range(Sims):
     # Additionally the expected Z matrix - unordered -  to use for checking factor ordering
     # and the factor order - as per the function used by MOFA based on variance explained
     
-    expAll = ent.model.getExpectations(only_first_moments=False)
+    #######
     
-    np.savetxt(os.path.join(FctrznOutDir, 'ZChk_raw' + '.csv'), expAll['Z']['E'], delimiter=',')
+    # expAll = ent.model.getExpectations(only_first_moments=False)
     
-    r2 = ent.model.calculate_variance_explained()
-    order_factors = np.argsort( np.array(r2).sum(axis=(0,1), where= ~np.isnan(np.array(r2))) )[::-1]
+    # np.savetxt(os.path.join(FctrznOutDir, 'ZChk_raw' + '.csv'), expAll['Z']['E'], delimiter=',')
     
-    np.savetxt(os.path.join(FctrznOutDir, 'order_factors.csv'), order_factors, delimiter=',')
-    np.savetxt(os.path.join(FctrznOutDir, 'r2.csv'), r2[0], delimiter=',')
+    # r2 = ent.model.calculate_variance_explained()
+    # order_factors = np.argsort( np.array(r2).sum(axis=(0,1), where= ~np.isnan(np.array(r2))) )[::-1]
     
-    for m in range(M):
+    # np.savetxt(os.path.join(FctrznOutDir, 'order_factors.csv'), order_factors, delimiter=',')
+    # np.savetxt(os.path.join(FctrznOutDir, 'r2.csv'), r2[0], delimiter=',')
+    
+    # for m in range(M):
         
-        np.savetxt(os.path.join(FctrznOutDir, 'WSq' + str(m) + '.csv'), 
-                    expAll['W'][m]['E2'][:,order_factors], delimiter=',')
+    #     np.savetxt(os.path.join(FctrznOutDir, 'WSq' + str(m) + '.csv'), 
+    #                 expAll['W'][m]['E2'][:,order_factors], delimiter=',')
         
         
-        if likelihoods[m] != 'poisson': 
-            np.savetxt(os.path.join(FctrznOutDir, 'TauLn' + str(m) + '.csv'), 
-                    expAll['Tau'][m]['lnE'][0,:], delimiter=',')
+    #     if likelihoods[m] != 'poisson': 
+    #         np.savetxt(os.path.join(FctrznOutDir, 'TauLn' + str(m) + '.csv'), 
+    #                 expAll['Tau'][m]['lnE'][0,:], delimiter=',')
+    
+    ########
     
     # use the premade function to save results as an hdf5 file - needs to happen after the calculate variance explained function above
     
