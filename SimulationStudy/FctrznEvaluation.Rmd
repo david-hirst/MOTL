@@ -50,7 +50,8 @@ scale_views = 'False'
 center_groups = 'True'
 FactorSelection = 'ActiveK'
 
-FctrznMethods = c('Direct_Trg', 'TL_VI', 'ProjectR_CS', 'Random')
+# FctrznMethods = c('Direct_Trg', 'TL_VI', 'ProjectR_CS', 'Random')
+FctrznMethods = c('Direct_Trg', 'TL_VI', 'Random')
 
 FeatWseScl = TRUE ## if TRUE then weight vectors scaled featurewise, otherwise factorwise
 # ScaleW = function(x) {x/max(abs(x),na.rm = TRUE)} ## function for scaling weight vectors
