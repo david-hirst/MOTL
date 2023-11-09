@@ -120,6 +120,8 @@ for s in range(Sims):
     for m in range(len(D)):
         np.savetxt(os.path.join(sim_out_dir, 'W' + str(m) + '.csv'), SimData['W'][m], delimiter=',')
         np.savetxt(os.path.join(sim_out_dir, 'Y' + str(m) + '.csv'), SimData['Y'][m], delimiter=',')
+        
+    np.savetxt(os.path.join(sim_out_dir, 'Z.csv'), SimData['Z'], delimiter=',')
 
 #### save the meta data
 

@@ -208,7 +208,7 @@ def SimMultiOmics(CLrn = 20, CLrnNPool = [10,25,40], CTrg = 2, CTrgN = 7,
             print("Distributions must be either Poisson, Normal, Beta or Bernoulli")
             sys.exit()
             
-    return {'Nc': Nc, 'CIds': CIds, 'IfLrn': IfLrn, 'ZMuC': ZMuC, 'W': W, 'Y': Y}
+    return {'Nc': Nc, 'CIds': CIds, 'IfLrn': IfLrn, 'ZMuC': ZMuC, 'W': W, 'Y': Y, 'Z': Z}
 
     ## this returns a dictionary containing the following: 
     # Nc: The number of samples in each group of samples. The learning dataset groups are first
