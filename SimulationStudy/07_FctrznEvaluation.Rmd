@@ -319,10 +319,13 @@ for (Config in Configs){
                               )
               
             }
+            FctrCorsNums = 1:length(FctrCors)
+            # only statistically significant correlations considered
             FctrCors = FctrCors[FctrCorsPVs<corCutOff]
+            FctrCorsNums = FctrCorsNums[FctrCorsPVs<corCutOff]
             if(length(FctrCors)>=1){
               FctrCorsRks = base::rank(-FctrCors, ties="first")
-              FctrznTrg_SigFct = c(FctrznTrg_SigFct, which(FctrCorsRks == 1))
+              FctrznTrg_SigFct = c(FctrznTrg_SigFct, FctrCorsNums[FctrCorsRks == 1])
             } else {
               FctrznTrg_SigFct = c(FctrznTrg_SigFct,0)
             }

@@ -1,4 +1,6 @@
-Simulation study explanation of scripts (listed in order in which they are run):
+#####################
+###### Simulation study explanation of scripts (listed in order in which they are run):
+#####################
 
 Multi_Omics_Simulator.py: This contains the function for generating a multi-omics dataset based on a groundtruth factor structure
 
