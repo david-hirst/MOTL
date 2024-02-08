@@ -112,7 +112,6 @@ table(EvaluationsDF$fctrzn_type)
 Change names if necessary
 
 ```{r}
-EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="ProjectR_CS"]="projectR"
 EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="TL_VI"]="MOTL"
 EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Direct_Trg"]="Direct"
 EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Random"]="Random_TL"
@@ -237,8 +236,8 @@ ggsave(file.path(BaseDir,"AllScoresPlots.png"),
 Table of median or mean scores
 
 ```{r}
-# TableScore = "F1"
-TableScore = "FitSeconds"
+TableScore = "F1"
+# TableScore = "FitSeconds"
 
 SmryStats = do.call(data.frame, 
                        aggregate(score_adj ~ YDists+D+CLrn+K+Zsd+fctrzn_type, 
@@ -267,17 +266,6 @@ SmryStatsWide = SmryStatsWide[
 write.table(SmryStatsWide[,-1],
             file.path(BaseDir,paste0(TableScore,"Table.csv")),
             quote = FALSE, sep=',', na='', row.names = FALSE, col.names = TRUE)
-## kable table
-
-options(knitr.kable.NA = '')
-
-## code to export table
-
-knitr::kable(SmryStatsWide, 
-             digits=c(0,0,0,0,1,2,2,2,2,2), booktabs = T, row.names=F) %>%
-  kable_styling(full_width = F, 
-                font_size = 12)%>%
-  save_kable(file.path(BaseDir,paste0(TableScore,"Table.png")))
 
 ```
 

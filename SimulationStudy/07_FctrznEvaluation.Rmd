@@ -49,8 +49,6 @@ Configs = c(
 scale_views = 'False'
 center_groups = 'True'
 FactorSelection = 'ActiveK'
-
-# FctrznMethods = c('Direct_Trg', 'TL_VI', 'ProjectR_CS', 'Random')
 FctrznMethods = c('Direct_Trg', 'TL_VI', 'Random')
 
 FeatWseScl = TRUE ## if TRUE then weight vectors scaled featurewise, otherwise factorwise
@@ -189,34 +187,6 @@ for (Config in Configs){
         FTrgVarKp = FctrznTrg$TrgKp
         FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
         FctrznTrg_Z = FctrznTrg$ZMu
-        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
-        
-      } else if (fm=='ProjectR'){
-        
-        FctrznsTrgDir = file.path(InputDir,
-                         paste0("TL","_scale_",
-                                scale_views,"_center_",center_groups,"_",
-                                FactorSelection,"_ProjectR"))
-        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
-        
-        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_ProjectR_data.rds"))
-        FTrgVarKp = FctrznTrg$TrgKp
-        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
-        FctrznTrg_Z = t(FctrznTrg$ZProjectR)
-        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
-        
-      } else if (fm=='ProjectR_CS'){
-        
-        FctrznsTrgDir = file.path(InputDir,
-                       paste0("TL","_scale_",
-                              scale_views,"_center_",center_groups,"_",
-                              FactorSelection,"_ProjectR_CS"))
-        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
-        
-        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_ProjectR_data.rds"))
-        FTrgVarKp = FctrznTrg$TrgKp
-        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
-        FctrznTrg_Z = t(FctrznTrg$ZProjectR)
         FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
         
       } else if (fm=='Random'){
