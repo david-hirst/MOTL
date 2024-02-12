@@ -122,13 +122,13 @@ brcds_SNV = readRDS(file.path(BarcodesDir,'brcds_SNV.rds'))
 
 ## TO COMMENT
 ## subset based on instersection of projects - in case only subset selected in either script
-# Prjcts = c("TCGA-OV", "TCGA-UCS")
-# Prjcts = unique(base::intersect(Prjcts,brcds_mRNA$prjct))
-#  
-# brcds_mRNA = brcds_mRNA[is.element(brcds_mRNA$prjct,Prjcts),]
-# brcds_miRNA = brcds_miRNA[is.element(brcds_miRNA$prjct,Prjcts),]
-# brcds_DNAme = brcds_DNAme[is.element(brcds_DNAme$prjct,Prjcts),]
-# brcds_SNV = brcds_SNV[is.element(brcds_SNV$prjct,Prjcts),]
+Prjcts = Prjcts[c(1:5)]
+Prjcts = unique(base::intersect(Prjcts,brcds_mRNA$prjct))
+
+brcds_mRNA = brcds_mRNA[is.element(brcds_mRNA$prjct,Prjcts),]
+brcds_miRNA = brcds_miRNA[is.element(brcds_miRNA$prjct,Prjcts),]
+brcds_DNAme = brcds_DNAme[is.element(brcds_DNAme$prjct,Prjcts),]
+brcds_SNV = brcds_SNV[is.element(brcds_SNV$prjct,Prjcts),]
 
 # save samples for shuffling and keeping track of names later on
 smpls = substr(brcds_mRNA$brcds,1,16)

@@ -348,7 +348,6 @@ mRNAdataPreparation <- function(Prjcts, brcds_mRNA, InputDir){
     }
     rm(exdat_mRNA)
     gc()
-    sleep(0.5)
   }
   return(expdat_mRNA_merged)
 }
@@ -395,7 +394,6 @@ DNAmedataPreparation <- function(Prjcts, brcds_DNAme, InputDir){
     }
     rm(exdat_DNAme)
     gc()
-    sleep(0.5)
   }
   return(exdat_DNAme_merged)
 }
