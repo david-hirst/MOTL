@@ -526,17 +526,17 @@ brcds_SS = list(
   brcds_miRNA_SS = brcds_miRNA_SS,
   brcds_DNAme_SS = brcds_DNAme_SS
 )
-saveRDS(brcds_SS, file.path(OutDir,'brcds_SS.rds'))
+saveRDS(brcds_SS, file.path(OutDir_SS,'brcds_SS.rds'))
 
 ## ------- CREATION OF SUBSETS DATA ---
 
 ## IMPORT METADATA FROM PREVIOUS STEP 
-brcds_SS = readRDS(file.path(OutDir,'brcds_SS.rds'))
+brcds_SS = readRDS(file.path(OutDir_SS,'brcds_SS.rds'))
 
 InputDir = file.path("DownloadedData_unfltrd")
-OutDir = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),'_SS',SS_size,'_',TopD,'D')
+# OutDir_SS = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),'_SS',SS_size,'_',TopD,'D')
 
-tmp <- lapply(1:brcds_SS$SS_count, createSubsetOneProject, brcds_SS = brcds_SS, OutDir = OutDir, GeoMeans = GeoMeans)
+tmp <- lapply(1:brcds_SS$SS_count, createSubsetOneProject, brcds_SS = brcds_SS, OutDir = OutDir_SS, GeoMeans = GeoMeans)
 
 ## ------------------ SAVE METADATA ---
 expdat_meta = list(
@@ -545,10 +545,10 @@ expdat_meta = list(
   SS_count = brcds_SS$SS_count
 )
 
-saveRDS(expdat_meta, file.path(OutDir,'expdat_meta.rds'))
+saveRDS(expdat_meta, file.path(OutDir_SS,'expdat_meta.rds'))
 
 expdat_meta.json = rjson::toJSON(expdat_meta)
-write(expdat_meta.json,file.path(OutDir,'expdat_meta.json'))
+write(expdat_meta.json,file.path(OutDir_SS,'expdat_meta.json'))
 ## -------------------------------------
 
 ## ------------------------------------------------------------------------------
@@ -644,9 +644,9 @@ if(!dir.exists(OutDir)){
 }
 
 ## IMPORT BARCODES FROM PREVIOUS STEP
-brcds_mRNA = readRDS(file.path(OutDir,'brcds_mRNA.rds'))
-brcds_miRNA = readRDS(file.path(OutDir,'brcds_miRNA.rds'))
-brcds_DNAme = readRDS(file.path(OutDir,'brcds_DNAme.rds'))
+brcds_mRNA = readRDS(file.path(BarcodesDir,'brcds_mRNA.rds'))
+brcds_miRNA = readRDS(file.path(BarcodesDir,'brcds_miRNA.rds'))
+brcds_DNAme = readRDS(file.path(BarcodesDir,'brcds_DNAme.rds'))
 
 # save samples for shuffling and keeping track of names later on
 smpls = substr(brcds_mRNA$brcds,1,16)
@@ -773,11 +773,14 @@ saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_l
 print(Sys.time())
 print("Target subset")
 
+SS_size <- 5
+OutDir = paste0('Trg_', paste0(substr(Prjcts,6,nchar(Prjcts)),collapse='_'), '_Full_',TopD,"D")
+
 ## PARAMETERS IMPORTATION
 ## CREATE A DIRECTORY TO SAVE THE FINAL FILES
 SSOutDir = paste0('Trg_', paste0(substr(Prjcts,6,nchar(Prjcts)),collapse='_'), '_SS',SS_size, '_', TopD,"D")
-if(!dir.exists(OutDir)){
-  dir.create(OutDir, showWarnings = FALSE, recursive = TRUE)
+if(!dir.exists(SSOutDir)){
+  dir.create(SSOutDir, showWarnings = FALSE, recursive = TRUE)
 }
 
 ## PARAMETERS IMPORTATION
@@ -845,7 +848,7 @@ gc()
 ## IMPORT METADATA FROM PREVIOUS STEP
 brcds_SS = readRDS(file.path(SSOutDir,'brcds_SS.rds'))
 
-tmp <- lapply(1:brcds_SS$SS_count, createSubsetMultiProjects, brcds_SS = brcds_SS, OutDir = OutDir, GeoMeans = GeoMeans)
+tmp <- lapply(1:brcds_SS$SS_count, createSubsetMultiProjects, brcds_SS = brcds_SS, OutDir = SSOutDir, GeoMeans = GeoMeans)
 
 ## ------------------ SAVE METADATA ---
 expdat_meta = list(
@@ -854,10 +857,10 @@ expdat_meta = list(
   SS_count = brcds_SS$SS_count
 )
 
-saveRDS(expdat_meta, file.path(OutDir,'expdat_meta_SS.rds'))
+saveRDS(expdat_meta, file.path(SSOutDir,'expdat_meta_SS.rds'))
 
 expdat_meta.json = rjson::toJSON(expdat_meta)
-write(expdat_meta.json,file.path(OutDir,'expdat_meta_SS.json'))
+write(expdat_meta.json,file.path(SSOutDir,'expdat_meta_SS.json'))
 ## -------------------------------------
 
 ## ------------------------------------------------------------------------------
