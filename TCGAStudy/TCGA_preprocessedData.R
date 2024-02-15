@@ -545,10 +545,10 @@ expdat_meta = list(
   SS_count = brcds_SS$SS_count
 )
 
-saveRDS(expdat_meta, file.path(OutDir_SS,'expdat_meta.rds'))
+saveRDS(expdat_meta, file.path(OutDir_SS,'expdat_meta_SS.rds'))
 
 expdat_meta.json = rjson::toJSON(expdat_meta)
-write(expdat_meta.json,file.path(OutDir_SS,'expdat_meta.json'))
+write(expdat_meta.json,file.path(OutDir_SS,'expdat_meta_SS.json'))
 ## -------------------------------------
 
 ## ------------------------------------------------------------------------------
@@ -832,7 +832,7 @@ brcds_DNAme_SS <- lapply(smpls_SS, selectBarcodeSampleNames, expdat_meta$brcds_D
 brcds_SS = list(
   Seed = Seed,
   SS_size = SS_size,
-  SS_count = SS_count,
+  SS_count = SS_count_min,
   smpls_SS = smpls_SS,
   brcds_mRNA_SS = brcds_mRNA_SS,
   brcds_miRNA_SS = brcds_miRNA_SS,
