@@ -796,7 +796,7 @@ selectBarcodeSampleNames <- function(smpls, expdat){
   return(brcds_fltr)
 }
 
-createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMeans){
+createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMeans, InputDir){
   #' Prepare data for one subset with only one project
   #' 
   #' 1. Extract barcodes for the corresponding subset
@@ -936,7 +936,7 @@ createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMe
   saveMetadata(OutDir = SSOutDir, Seed = Seed, smpls = smpls_SS, expdat_list = expdat_list, brcds_list = brcds_list, Prjcts = Prjcts, GeoMeans_list = NULL)
 }
 
-createSubsetMultiProjects <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMeans){
+createSubsetMultiProjects <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMeans, InputDir){
   #' Prepare data for one subset for several projects
   #' 
   #' 1. Extract barcodes for the corresponding subset
@@ -1084,6 +1084,8 @@ createSubsetMultiProjects <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, Ge
   
   saveMetadata(OutDir = SSOutDir, Seed = Seed, smpls = smpls_SS, expdat_list = expdat_list, brcds_list = brcds_list, Prjcts = Prjcts)
   
+  print("metadata SS")
+  print(SSOutDir)
 }
 
 ## --------------------------------------------------------------

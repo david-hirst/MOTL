@@ -16,6 +16,7 @@ library(sesame)
 library(dplyr)
 
 ## FUNCTIONS
+# source("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOLTI_TL-VI/MOTL/TCGAStudy/TCGA_preprocessedData_functions.R")
 source("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOTL/TCGAStudy/TCGA_preprocessedData_functions.R")
 
 ## ------------------------------------------------------------------------------
@@ -536,7 +537,7 @@ brcds_SS = readRDS(file.path(OutDir_SS,'brcds_SS.rds'))
 InputDir = file.path("DownloadedData_unfltrd")
 # OutDir_SS = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),'_SS',SS_size,'_',TopD,'D')
 
-tmp <- lapply(1:brcds_SS$SS_count, createSubsetOneProject, brcds_SS = brcds_SS, OutDir = OutDir_SS, GeoMeans = GeoMeans)
+tmp <- lapply(1:brcds_SS$SS_count, createSubsetOneProject, brcds_SS = brcds_SS, OutDir = OutDir_SS, GeoMeans = GeoMeans, InputDir = InputDir)
 
 ## ------------------ SAVE METADATA ---
 expdat_meta = list(
@@ -848,7 +849,7 @@ gc()
 ## IMPORT METADATA FROM PREVIOUS STEP
 brcds_SS = readRDS(file.path(SSOutDir,'brcds_SS.rds'))
 
-tmp <- lapply(1:brcds_SS$SS_count, createSubsetMultiProjects, brcds_SS = brcds_SS, OutDir = SSOutDir, GeoMeans = GeoMeans)
+tmp <- lapply(1:brcds_SS$SS_count, createSubsetMultiProjects, brcds_SS = brcds_SS, OutDir = SSOutDir, GeoMeans = GeoMeans, InputDir = InputDir)
 
 ## ------------------ SAVE METADATA ---
 expdat_meta = list(
