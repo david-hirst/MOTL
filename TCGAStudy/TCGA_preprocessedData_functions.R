@@ -674,28 +674,25 @@ countsNormalization <- function(expdat, GeoMeans){
   #' @param GeoMeans "Trg", "Lrn" or vector of numerics
   #' @returns list of data.frame of the counts normalized and GeoMeans calculated
   
-    if(!(GeoMeans %in% c("Trg", "Lrn") | is.numeric(GeoMeans))){
-    print("GeoMeans parameter should be 'Trg' or 'Lrn' or a numeric value")
-    stop()
-  }
-  
   ## create deseq object
   expdat_dds = DESeq2::DESeqDataSet(expdat, design = ~ 1)
   
-  if(GeoMeans == "Lrn"){
+  if(is.numeric(GeoMeans)){
+    ## normalization
+    expdat_dds_norm = DESeq2::estimateSizeFactors(expdat_dds, geoMeans = GeoMeans)
+    GeoMeans = NULL
+  }else if(GeoMeans == "Lrn"){
     ## calculate geometric means to use for normalization of both learning and target sets
     GeoMeans = apply(counts(expdat_dds),1,GeoMeanFun)
     ## normalization
     expdat_dds_norm = DESeq2::estimateSizeFactors(expdat_dds, geoMeans = as.vector(GeoMeans))
-    
   } else if(GeoMeans == "Trg"){
     ## estimate size factors
     expdat_dds_norm = DESeq2::estimateSizeFactors(expdat_dds)
     GeoMeans = NULL
   }else{
-    ## normalization
-    expdat_dds_norm = DESeq2::estimateSizeFactors(expdat_dds, geoMeans = GeoMeans)
-    GeoMeans = NULL
+    print("GeoMeans parameter should be 'Trg' or 'Lrn' or a numeric value")
+    stop()
   }
   
   ## Extract normalized counts
