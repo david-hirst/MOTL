@@ -37,8 +37,7 @@ def import_data(G, M, omics, InputDir, metadata):
     smpls = [[metadata['smpls'][n] for n in range(N[g])] for g in range(G)]
     ftrs = [[metadata['ftrs_' + omics[m]][d] for d in range(D[m])] for m in range(M)]
 
-    MaxK = min(N, min(np.array(D)))[0]
-    #MaxK = min(N, min(np.array(D)))
+    MaxK = min(min(N), min(D))
 
     data = {
         "YData": YData,
