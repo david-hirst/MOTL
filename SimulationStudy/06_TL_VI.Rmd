@@ -45,7 +45,7 @@ FreqDropFactor = 1 ## how often to drop factors
 DropFactorTH = -100.01 # factor with lowest max variance, that is less than this, is dropped
 minFactors = 900 ## only checks to drop factors if number of factors is more than this
 MinIterations = 2 # as per MOFA with defaults in python, >= 2 (hardcoded floor), exl initial setup
-MaxIterations = 20000
+MaxIterations = 10000
 StartELBO = 1 #which iteration to start checking ELBO on, excl initiation iteration
 FreqELBO = 1 #how often to assess the ELBO
 # mofa convergence: if percentage change vs first elbo less than threshold
