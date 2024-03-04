@@ -33,7 +33,7 @@ extractSampleNamesShared <- function(omics_list){
     return(smpls)
   })
   smpls_shared = Reduce(base::intersect, smpls_list)
-
+  
   return(smpls_shared)
 }
 
@@ -169,7 +169,7 @@ mRNAPreprocessing <- function(Prjct, brcds_mRNA, InputDir){
   #' @param InputDir Directory input name where unfiltered data are saved
   #' @@returns tidy mRNA data with the selected barcode sample names (given in 
   #' the brcds_mRNA object). This return is a SummarizedExperiment object.
-
+  
   PrjctSffx = substr(Prjct,6,nchar(Prjct))
   
   print(PrjctSffx)
@@ -417,6 +417,28 @@ SNVdataPreparation <- function(Prjcts, brcds_SNV, InputDir){
     rm(exdat_SNV)
     gc()
   }
+  
+  ## convert to wide format matrix
+  exdat_SNV_merged = exdat_SNV_merged %>%
+    dplyr::group_by(Tumor_Sample_Barcode, Hugo_Symbol) %>%
+    dplyr::summarize(n = n()) %>%
+    as.data.frame()
+  
+  ## Reshape
+  exdat_SNV_merged = reshape(exdat_SNV_merged,
+                             idvar = "Hugo_Symbol",
+                             timevar = "Tumor_Sample_Barcode",
+                             direction = "wide")
+  
+  rownames(exdat_SNV_merged) = exdat_SNV_merged$Hugo_Symbol
+  exdat_SNV_merged = exdat_SNV_merged[,substr(colnames(exdat_SNV_merged),1,2)=="n."]
+  colnames(exdat_SNV_merged) = substr(colnames(exdat_SNV_merged),3,nchar(colnames(exdat_SNV_merged)))
+  
+  exdat_SNV_merged = as.matrix(exdat_SNV_merged)
+  exdat_SNV_merged[is.na(exdat_SNV_merged)]=0
+  exdat_SNV_merged = (exdat_SNV_merged > 0)+0
+  mode(exdat_SNV_merged) = "integer"
+  
   return(exdat_SNV_merged)
 }
 
@@ -555,7 +577,7 @@ miRNAFiltering <- function(expdat_miRNA){
   #'  
   #' @param expdat_mRNA SE object of miRNA data
   #' @returns SE miRNA data object filtered
-
+  
   FtrsKeep_miRNA = (rowMeans(is.na(assay(expdat_miRNA)))<0.2) &
     (rowMeans(assay(expdat_miRNA)==0, na.rm = TRUE)<0.9) &
     (rowVars(assay(expdat_miRNA), na.rm = TRUE)>0)
@@ -612,33 +634,33 @@ SNVFiltering <- function(expdat_SNV, TopD, SNVthreshold=0.01){
   #' @param TopD number of features to keep
   #' @returns data.frame of the SNV filtered data
   
-  ## convert to wide format matrix
-  expdat_SNV = expdat_SNV %>%
-    dplyr::group_by(Tumor_Sample_Barcode, Hugo_Symbol) %>%
-    dplyr::summarize(n = n()) %>%
-    as.data.frame()
-  
-  ## Reshape
-  expdat_SNV = reshape(expdat_SNV,
-                       idvar = "Hugo_Symbol",
-                       timevar = "Tumor_Sample_Barcode",
-                       direction = "wide")
-  
-  rownames(expdat_SNV) = expdat_SNV$Hugo_Symbol
-  expdat_SNV = expdat_SNV[,substr(colnames(expdat_SNV),1,2)=="n."]
-  colnames(expdat_SNV) = substr(colnames(expdat_SNV),3,18)
-  
-  expdat_SNV_mtrx = as.matrix(expdat_SNV)
-  expdat_SNV_mtrx[is.na(expdat_SNV_mtrx)]=0
-  expdat_SNV_mtrx = (expdat_SNV_mtrx > 0)+0
-  mode(expdat_SNV_mtrx) = "integer"
+  # ## convert to wide format matrix
+  # expdat_SNV = expdat_SNV %>%
+  #   dplyr::group_by(Tumor_Sample_Barcode, Hugo_Symbol) %>%
+  #   dplyr::summarize(n = n()) %>%
+  #   as.data.frame()
+  # 
+  # ## Reshape
+  # expdat_SNV = reshape(expdat_SNV,
+  #                      idvar = "Hugo_Symbol",
+  #                      timevar = "Tumor_Sample_Barcode",
+  #                      direction = "wide")
+  # 
+  # rownames(expdat_SNV) = expdat_SNV$Hugo_Symbol
+  # expdat_SNV = expdat_SNV[,substr(colnames(expdat_SNV),1,2)=="n."]
+  # colnames(expdat_SNV) = substr(colnames(expdat_SNV),3,18)
+  # 
+  # expdat_SNV_mtrx = as.matrix(expdat_SNV)
+  # expdat_SNV_mtrx[is.na(expdat_SNV_mtrx)]=0
+  # expdat_SNV_mtrx = (expdat_SNV_mtrx > 0)+0
+  # mode(expdat_SNV_mtrx) = "integer"
   
   ## prefiltering of merged dataset
-  FtrsKeep_SNV = (rowVars(expdat_SNV_mtrx, na.rm = TRUE)>0) & 
-    (rowMeans(expdat_SNV_mtrx)>SNVthreshold)
+  FtrsKeep_SNV = (rowVars(expdat_SNV, na.rm = TRUE)>0) & 
+    (rowMeans(expdat_SNV)>SNVthreshold)
   
   FtrsKeep_SNV[is.na(FtrsKeep_SNV)]=FALSE
-  expdat_SNV_tmp = expdat_SNV_mtrx[FtrsKeep_SNV,]
+  expdat_SNV_tmp = expdat_SNV[FtrsKeep_SNV,]
   
   ## keep X most variable and tidy up
   FtrsKeep_SNV_fltr = base::rank(-rowVars(expdat_SNV_tmp, na.rm = TRUE), ties.method = "first") <= TopD
@@ -835,7 +857,7 @@ createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMe
   
   ## Read and merge files
   expdat_mRNA_merged <- mRNAdataPreparation(Prjcts = Prjct, brcds_mRNA = brcds_mRNA_SS, InputDir = InputDir)
-
+  
   ## Normalization
   expdat_mRNA_norm <- countsNormalization(expdat = expdat_mRNA_merged, GeoMeans = GeoMeans)
   
@@ -883,7 +905,7 @@ createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMe
   
   ## Read and merge files 
   expdat_DNAme_merged <- DNAmedataPreparation(Prjcts = Prjct, brcds_DNAme = brcds_DNAme_SS, InputDir = InputDir)
-    
+  
   ## Filtering
   expdat_DNAme_fltr <- DNAmeFiltering(expdat_DNAme = expdat_DNAme_merged, TopD = TopD)
   
