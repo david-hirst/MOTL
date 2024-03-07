@@ -136,7 +136,7 @@ initTransferParameters <- function(views, brcds_SS, SS, YTrgFull, Fctrzn, likeli
                  nrow = dim(YTrgSS[[view]])[1], 
                  ncol = dim(YTrgSS[[view]])[2], 
                  byrow = FALSE)
-    rownames(Tau) = rownames(YTrgSS)
+    rownames(Tau) = rownames(YTrgSS[[view]])
     return(Tau)
   }, Fctrzn, YTrgSS, FtrsCommon)
   
@@ -153,7 +153,7 @@ initTransferParameters <- function(views, brcds_SS, SS, YTrgFull, Fctrzn, likeli
                      nrow = dim(YTrgSS[[view]])[1], 
                      ncol = dim(YTrgSS[[view]])[2], 
                      byrow = FALSE)
-      rownames(TauLn) = rownames(YTrgSS)
+      rownames(TauLn) = rownames(YTrgSS[[view]])
     } else{
       TauLn = numeric()
     }
