@@ -141,8 +141,8 @@ initTransferParameters <- function(views, brcds_SS, SS, YTrgFull, Fctrzn, likeli
   }, Fctrzn, YTrgSS, FtrsCommon)
   
   
-  ## LEARNING TAU PARAMETER
-  print("Learning set Tau")
+  ## LOG TAU PARAMETER
+  print("LOG Tau")
   TauLn <- sapply(views, function(view, likelihoods, Fctrzn, YTrgSS, FtrsCommon){
     if (likelihoods[view]=="gaussian"){
       TauLn = Fctrzn@expectations[["TauLn"]][[view]]
