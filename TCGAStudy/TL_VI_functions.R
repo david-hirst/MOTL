@@ -2,7 +2,7 @@
 
 ## ---------------------------------- TCGA RELATED FUNCTIONS ----
 
-TCGATrgSubsetPreparation <- function(view, brcds_SS, SS, YTrgFull, Fctrzn){
+TCGATargetDataPrefiltering <- function(view, brcds_SS, SS, YTrgFull, Fctrzn){
   #' 
   #' Prepare target subset data
   #' 
@@ -13,9 +13,9 @@ TCGATrgSubsetPreparation <- function(view, brcds_SS, SS, YTrgFull, Fctrzn){
   #' @param view current view name data
   #' @param brcds_SS list of subset sample names for each subset number/view
   #' @param SS current subset number
-  #' 
-  #' 
-  #'
+  #' @param YTrgFull
+  #' @param Fctrzn
+  #' @returns YTrgSS
   
   print(view)
   
@@ -45,69 +45,48 @@ TCGATrgSubsetPreparation <- function(view, brcds_SS, SS, YTrgFull, Fctrzn){
   return(YTrgSS)
 }
 
-## old name: preprocessTransfer
-preprocessTCGAData4TransferLearning <- function(YTrgSS, view, GeoMeans_Lrn, smpls){
+TCGATargetDataPreparation <- function(views, YTrgFull, brcds_SS, SS, Fctrzn, smpls, normalization = "Lrn", expdat_meta_Lrn, transformation = TRUE){
   #'
-  #' Prepare TCGA data for the transfert learning (for one given view)
-  #' 
-  #' Counts data are normalized and transformed (mRNA and miRNA)
-  #' DNAme SE object is transformed into dataframe
-  #' SNV data are already well shaped
-  #' Columns data (samples) are then reshaped and sorted according the smpls vector
   #'
-  #' @param YTrgSS list of data of one target subset
-  #' @param view view name of the current data
-  #' @param GeoMeans_Lrn list of geomeans calculated for learning data
-  #' @param smpls vector of sample names
-  #' @returns YTrgSS data well shaped for a specific view
+  #'
+  #'
+  #'
   
-  ## preprocess and transform
-  if (is.element(view,c('mRNA', 'miRNA'))){
-    YTrgSS = countsNormalization(expdat = YTrgSS, GeoMeans = GeoMeans_Lrn)
-    YTrgSS = countsTransformation(expdat_count = YTrgSS$counts, TopD = nrow(YTrgSS$counts))
-  } else if (view=='DNAme'){
-    YTrgSS = assay(YTrgSS)
-  }
+  print("Feature prefiltering")
   
-  ## order columns
-  colnames(YTrgSS) = substr(colnames(YTrgSS),1,16)
-  YTrgSS = YTrgSS[,match(smpls,colnames(YTrgSS))]
+  ## Feature variance prefiltering and feature harmonization
+  YTrgSSFull = sapply(views, function(view, brcds_SS, SS, YTrgFull, Fctrzn){
+    YTrgSS = TCGATargetDataPrefiltering(view, brcds_SS, SS, YTrgFull, Fctrzn)
+    return(YTrgSS)
+  }, brcds_SS, SS, YTrgFull, Fctrzn)
+  
+  ## Reshape data
+  YTrgSSFull = sapply(views, function(view, YTrgSSFull, smpls){
+    YTrgSS = YTrgSSFull[[view]]
+    if(is.element(view,c('mRNA', 'miRNA', 'DNAme'))){
+      YTrgSS = assay(YTrgSS)
+    }
+    
+    ## order columns
+    colnames(YTrgSS) = substr(colnames(YTrgSS),1,16)
+    YTrgSS = YTrgSS[,match(smpls,colnames(YTrgSS))]
+    
+    return(YTrgSS)
+  }, YTrgSSFull, smpls)
+  
+  ## Normalization and transformation
+  print("Normalization and transformation")
+  YTrgSSFull = sapply(views, preprocessCountsData, YTrgSSFull, normalization, expdat_meta_Lrn, transformation)
   
   ## Return
-  return(YTrgSS)
-}
-
-TCGAinitTransferLearningParamaters <- function(YTrgFull, views, brcds_SS, SS, expdat_meta_Lrn, Fctrzn, likelihoods){
-  #'
-  #' Transfer Learning parameters initialization
-  #' 
-  #' 
-  #' @param YTrgFull named list of data
-  #' @param views vector of data names
-  #' 
-  #' 
-  
-  ## Prepare YTrgSS
-  print("Prepare YTrgSS")
-  YTrgSS <- sapply(views, TCGATrgSubsetPreparation, brcds_SS = brcds_SS, SS = SS, YTrgFull = YTrgFull, Fctrzn = Fctrzn)
-  YTrgFtrs <- lapply(YTrgSS, rownames)
-  
-  ## PREPROCESS DATA
-  YTrgSS <- sapply(views, function(view, YTrgSS, GeoMeans_Lrn){
-    YTrgSS <- preprocessTCGAData4TransferLearning(view = view, YTrgSS = YTrgSS[[view]], GeoMeans_Lrn = GeoMeans_Lrn[[view]])
-    return(YTrgSS)
-  }, YTrgSS, GeoMeans_Lrn)
-  
-  TL_param = initTransferLearningParamaters(YTrgSS, views, expdat_meta_Lrn, Fctrzn, likelihoods)
-  
-  return(TL_param)
+  return(YTrgSSFull)
 }
 
 ## --------------------------------------------------------------
 
 ## ----------------------------------------- INIT PARAMETERS ----
 
-TargetDataPreparation <- function(view, YTrg, Fctrzn, smpls){
+TargetDataPrefiltering <- function(view, YTrg_list, Fctrzn, smpls){
   #'
   #' Prepare the target data for a given view
   #' 
@@ -117,10 +96,12 @@ TargetDataPreparation <- function(view, YTrg, Fctrzn, smpls){
   #' Order columns based on give sample order (smpls)
   #'
   #' @param view current view data name
-  #' @param YTrg current data matrix
+  #' @param YTrg_list named list of data
   #' @param Fctrzn
   #' @param smpls ordered vector of sample names
   #' @returns 
+  
+  YTrg = YTrg_list[[view]]
   
   ## prefiltering, only condition is that variance >0
   FtrsKeep = rowVars(YTrg, na.rm = TRUE)>0
@@ -142,8 +123,85 @@ TargetDataPreparation <- function(view, YTrg, Fctrzn, smpls){
   
 }
 
-## MT faut faire le tri des colonnes avant ou après, mais à un moment (peut être avant d'appeler cette function)
-initTransferLearningParamaters <- function(YTrgFull, views, expdat_meta_Lrn, Fctrzn, likelihoods){
+GeoMeans_Lrn_init <- function(view, expdat_meta_Lrn, YTrgFtrs){
+  #'
+  #'
+  if (is.element(view,c('mRNA', 'miRNA'))){
+    GeoMeans_Lrn = expdat_meta_Lrn[[paste0('GeoMeans_',view)]]
+    FtrsKeep = is.element(names(GeoMeans_Lrn),YTrgFtrs)
+    GeoMeans_Lrn = GeoMeans_Lrn[FtrsKeep]
+    GeoMeans_Lrn = GeoMeans_Lrn[match(YTrgFtrs,names(GeoMeans_Lrn))]
+  } else {
+    GeoMeans_Lrn = numeric()
+  }
+  return(GeoMeans_Lrn)
+  
+}
+
+preprocessCountsData <- function(view, YTrg_list, normalization = FALSE, expdat_meta_Lrn, transformation = FALSE){
+  #'
+  #' @param view current data view name
+  #' @param YTrg_list list of training data
+  #' @param normalization FALSE, or "Lrn", or "Trg"
+  #' @param expdat_meta_Lrn
+  #' @param transformation boolean
+  #' @returns
+  
+  ## Select current data
+  YTrg = YTrg_list[[view]]
+  
+  if(view %in% c("mRNA", "miRNA")){
+    
+    print(view)
+    
+    ## Normalization
+    ## if Lrn, retreive the learning set geomeans and normalize with it
+    ## if Trg, normalize without geomeans
+    if(is.character(normalization)){
+      if(normalization == "Lrn"){
+        print("Normalize with the Learning set GeoMeans")
+        GeoMeans <- GeoMeans_Lrn_init(view, expdat_meta_Lrn, rownames(YTrg))
+      }
+      if(normalization == "Trg"){
+        print("Normalize without GeoMeans")
+        GeoMeans = normalization
+      }
+      YTrg = SummarizedExperiment(assays = list(YTrg))
+      YTrg = countsNormalization(expdat = YTrg, GeoMeans = GeoMeans)
+      YTrg = YTrg$counts
+    }else{print("No normalization")}
+    
+    ## Transformation
+    if(transformation){
+      print("Log transform data")
+      YTrg = countsTransformation(expdat_count = YTrg, TopD = nrow(YTrg))
+    }else{print("No transformation")}
+  }
+  
+  ## Return
+  return(YTrg)
+}
+
+TargetDataPreparation <- function(view, YTrg_list, Fctrzn, smpls, expdat_meta_Lrn, normalization = FALSE, transformation = FALSE){
+  #'
+  #'
+  #'
+  #'
+  #'
+  
+  ## Feature variance prefiltering and feature harmonization
+  print("Feature prefiltering")
+  YTrg = sapply(views, TargetDataPrefiltering, YTrg_list, Fctrzn, smpls)
+  
+  ## Normalization and transformation
+  print("Normalization and transformation")
+  YTrg = sapply(views, preprocessCountsData, YTrg, normalization, expdat_meta_Lrn, transformation)
+  
+  ## Return 
+  return(YTrg)
+}
+
+initTransferLearningParamaters <- function(YTrg, views, expdat_meta_Lrn, Fctrzn, likelihoods){
   #'
   #' Transfer Learning parameters initialization
   #' 
@@ -152,34 +210,20 @@ initTransferLearningParamaters <- function(YTrgFull, views, expdat_meta_Lrn, Fct
   #' Extract the factorized learning set weights (from MOFA)
   #' Extract the factorized learning set squared weights (from MOFA)
   #' Extract the learning set Tau and log(Tau) (from MOFA)
-  #' For each parameter, commun features (YTrgFtrs) with the YTrgFull are selected
-  #' YTrgFull, Tau and TauLn matrices are transposed
+  #' For each parameter, commun features (YTrgFtrs) with the YTrg are selected
+  #' YTrg, Tau and TauLn matrices are transposed
   #' 
-  #' @param YTrgFull named list of data (data should have the same order of the columns)
+  #' @param YTrg named list of data (data should have the same order of the columns)
   #' @param views vector of data names
   #' @param expdat_meta_Lrn list of learning set metadata 
   #' @param Fctrzn 
   #' @param likelihoods
   #' @returns TL_param list of parameters 
-  #' (YTrgFull, GeoMeans_Lrn, Fctrzn_Lrn_W0, Fctrzn_Lrn_WFctrzn_Lrn_WSq, Tau, TauLn)
+  #' (YTrg, GeoMeans_Lrn, Fctrzn_Lrn_W0, Fctrzn_Lrn_WFctrzn_Lrn_WSq, Tau, TauLn)
   #' 
   
   ## Feature names in each data
-  YTrgFtrs <- lapply(YTrgFull, rownames)
-  
-  ## GeoMeans
-  print("Geomeans of learning set")
-  GeoMeans_Lrn <- sapply(views, function(view, expdat_meta_Lrn, YTrgFtrs){
-    if (is.element(view,c('mRNA', 'miRNA'))){
-      GeoMeans_Lrn = expdat_meta_Lrn[[paste0('GeoMeans_',view)]]
-      FtrsKeep = is.element(names(GeoMeans_Lrn),YTrgFtrs[[view]])
-      GeoMeans_Lrn = GeoMeans_Lrn[FtrsKeep]
-      GeoMeans_Lrn = GeoMeans_Lrn[match(YTrgFtrs[[view]],names(GeoMeans_Lrn))]
-    } else {
-      GeoMeans_Lrn = numeric()
-    }
-    return(GeoMeans_Lrn)
-  }, expdat_meta_Lrn, YTrgFtrs)
+  YTrgFtrs <- lapply(YTrg, rownames)
   
   ## FACTORIZED LEARNING WEIGHTS MATRIX ZERO
   print("Factorized learning set weight intercepts")
@@ -213,48 +257,47 @@ initTransferLearningParamaters <- function(YTrgFull, views, expdat_meta_Lrn, Fct
   
   ## TAU PARAMETER
   print("Tau")
-  Tau <- sapply(views, function(view, Fctrzn, YTrgFull, YTrgFtrs){
+  Tau <- sapply(views, function(view, Fctrzn, YTrg, YTrgFtrs){
     Tau = Fctrzn@expectations[["Tau"]][[view]]$group0
     FtrsKeep = is.element(rownames(Tau),YTrgFtrs[[view]])
     Tau = Tau[FtrsKeep,]
     Tau = Tau[match(YTrgFtrs[[view]],rownames(Tau)),]
     Tau = matrix(rowMeans(Tau, na.rm = TRUE),
-                 nrow = dim(YTrgFull[[view]])[1], 
-                 ncol = dim(YTrgFull[[view]])[2], 
+                 nrow = dim(YTrg[[view]])[1], 
+                 ncol = dim(YTrg[[view]])[2], 
                  byrow = FALSE)
-    rownames(Tau) = rownames(YTrgFull[[view]])
+    rownames(Tau) = rownames(YTrg[[view]])
     return(Tau)
-  }, Fctrzn, YTrgFull, YTrgFtrs)
+  }, Fctrzn, YTrg, YTrgFtrs)
   
   ## LOG TAU PARAMETER
   print("LOG Tau")
-  TauLn <- sapply(views, function(view, likelihoods, Fctrzn, YTrgFull, YTrgFtrs){
+  TauLn <- sapply(views, function(view, likelihoods, Fctrzn, YTrg, YTrgFtrs){
     if (likelihoods[view]=="gaussian"){
       TauLn = Fctrzn@expectations[["TauLn"]][[view]]
       FtrsKeep = is.element(names(TauLn),YTrgFtrs[[view]])
       TauLn = TauLn[FtrsKeep]
       TauLn = TauLn[match(YTrgFtrs[[view]],names(TauLn))]
       TauLn = matrix(TauLn,
-                     nrow = dim(YTrgFull[[view]])[1], 
-                     ncol = dim(YTrgFull[[view]])[2], 
+                     nrow = dim(YTrg[[view]])[1], 
+                     ncol = dim(YTrg[[view]])[2], 
                      byrow = FALSE)
-      rownames(TauLn) = rownames(YTrgFull[[view]])
+      rownames(TauLn) = rownames(YTrg[[view]])
     } else{
       TauLn = numeric()
     }
     return(TauLn)
-  }, likelihoods, Fctrzn, YTrgFull, YTrgFtrs)
+  }, likelihoods, Fctrzn, YTrg, YTrgFtrs)
   
   ## transpose matrices where necessary - to make them samples x features
   ## MT to check
-  YTrgFull <- lapply(YTrgFull, t)
+  YTrg <- lapply(YTrg, t)
   Tau = lapply(Tau, t)
   TauLn = lapply(TauLn, t)
   
   ## return
   TL_param = list(
-    "YTrg" = YTrgFull,
-    "GeoMeans_Lrn" = GeoMeans_Lrn,
+    "YTrg" = YTrg,
     "Fctrzn_Lrn_W0" = Fctrzn_Lrn_W0,
     "Fctrzn_Lrn_W" = Fctrzn_Lrn_W,
     "Fctrzn_Lrn_WSq" = Fctrzn_Lrn_WSq,
@@ -336,7 +379,7 @@ Tau_calculation <- function(view, likelihoods, Zeta, Tau){
   return(Tau)
 }
 
-TauLn_calculation <- function(view, likelihoodsLrn, LrnSimple, Fctrzn, LrnFctrnDir){
+TauLn_calculation <- function(view, likelihoodsLrn, Fctrzn, LrnFctrnDir, LrnSimple = TRUE){
   #'
   #' @param view
   #' @param likelihoodsLrn
@@ -401,7 +444,7 @@ ZVar_calculation <- function(view, Tau, Fctrzn_Lrn_WSq){
   #' @param Tau
   #' @param Fctrzn_Lrn_WSq 
   #' @returns ZVar_m the calculated Z variances matrix for the current data
-
+  
   ZVar_m = Tau[[view]] %*% Fctrzn_Lrn_WSq[[view]]
   return(ZVar_m)
 }
@@ -516,7 +559,7 @@ E_Z_SqE_W_Sq_update <- function(view, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W){
   #' @param Fctrzn_Lrn_W0
   #' @param Fctrzn_Lrn_W
   #' @returns 
-
+  
   E_Z_SqE_W_Sq = (cbind(ZMu_0,ZMu)^2) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]])^2)
   return(E_Z_SqE_W_Sq)
 }
@@ -551,7 +594,7 @@ E_ZWSq_update <- function(view, E_ZE_W, ZMuSq, E_Z_SqE_W_Sq, E_ZSqE_WSq){
   return(E_ZWSq)
 }
 
-WSq_calculation <- function(view, LrnSimple, Fctrzn, LrnFctrnDir){
+WSq_calculation <- function(view, Fctrzn, LrnFctrnDir, LrnSimple = TRUE){
   #'
   #' load or calculate E[W^2] values
   #' factors were ordered in the same way as for other latent variables
@@ -617,8 +660,7 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   ss_fit_start_time = Sys.time()
   
   ## RETREIVE PARAMETERS
-  YTrgSS <- TL_param$YTrgSS
-  GeoMeans_Lrn <- TL_param$GeoMeans_Lrn
+  YTrgSS <- TL_param$YTrg
   Fctrzn_Lrn_W0 <- TL_param$Fctrzn_Lrn_W0
   Fctrzn_Lrn_W <- TL_param$Fctrzn_Lrn_W
   Fctrzn_Lrn_WSq <- TL_param$Fctrzn_Lrn_WSq
@@ -797,7 +839,7 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   
   ## delete before next subset in case i've missed something in the loop
   rm(list = c("YTrgSS", "YGauss", "ZMu_0", "ZMu", "Fctrzn_Lrn_W0", "Fctrzn_Lrn_W", "ELBO", "ELBO_P", "ELBO_Q", "ELBO_L", 
-              'E_ZE_W', 'E_Z_SqE_W_Sq', 'E_ZSqE_WSq', 'E_ZWSq', "ZMuSq", "GeoMeans_Lrn", "Fctrzn_Lrn_WSq", "Tau", "TauLn", "ZVar", "Zeta"))
+              'E_ZE_W', 'E_Z_SqE_W_Sq', 'E_ZSqE_WSq', 'E_ZWSq', "ZMuSq", "Fctrzn_Lrn_WSq", "Tau", "TauLn", "ZVar", "Zeta"))
   
   invisible(gc())
 }
@@ -921,6 +963,66 @@ initTransferParameters_oldVersion <- function(views, brcds_SS, SS, YTrgFull, Fct
     "Tau" = Tau,
     "TauLn" = TauLn
   )
+  return(TL_param)
+}
+
+## old name: preprocessTransfer
+## MT to remove also
+preprocessTCGAData4TransferLearning <- function(view, YTrgSS_list, GeoMeans_Lrn, smpls){
+  #'
+  #' Prepare TCGA data for the transfert learning (for one given view)
+  #' 
+  #' Counts data are normalized and transformed (mRNA and miRNA)
+  #' DNAme SE object is transformed into dataframe
+  #' SNV data are already well shaped
+  #' Columns data (samples) are then reshaped and sorted according the smpls vector
+  #'
+  #' @param YTrgSS list of data of one target subset
+  #' @param view view name of the current data
+  #' @param GeoMeans_Lrn list of geomeans calculated for learning data
+  #' @param smpls vector of sample names
+  #' @returns YTrgSS data well shaped for a specific view
+  
+  ## preprocess and transform
+  if (is.element(view,c('mRNA', 'miRNA'))){
+    YTrgSS = countsNormalization(expdat = YTrgSS_list[[view]], GeoMeans = GeoMeans_Lrn)
+    YTrgSS = countsTransformation(expdat_count = YTrgSS$counts, TopD = nrow(YTrgSS$counts))
+  } else if (view=='DNAme'){
+    YTrgSS = assay(YTrgSS_list[[view]])
+  }
+  
+  ## order columns
+  colnames(YTrgSS) = substr(colnames(YTrgSS),1,16)
+  YTrgSS = YTrgSS[,match(smpls,colnames(YTrgSS))]
+  
+  ## Return
+  return(YTrgSS)
+}
+
+### MT to remove
+TCGAinitTransferLearningParamaters <- function(YTrgFull, views, brcds_SS, SS, expdat_meta_Lrn, Fctrzn, likelihoods){
+  #'
+  #' Transfer Learning parameters initialization
+  #' 
+  #' 
+  #' @param YTrgFull named list of data
+  #' @param views vector of data names
+  #' 
+  #' 
+  
+  ## Prepare YTrgSS
+  print("Prepare YTrgSS")
+  YTrgSS <- sapply(views, TCGATrgSubsetPreparation, brcds_SS = brcds_SS, SS = SS, YTrgFull = YTrgFull, Fctrzn = Fctrzn)
+  YTrgFtrs <- lapply(YTrgSS, rownames)
+  
+  ## PREPROCESS DATA
+  YTrgSS <- sapply(views, function(view, YTrgSS, GeoMeans_Lrn){
+    YTrgSS <- preprocessTCGAData4TransferLearning(view = view, YTrgSS = YTrgSS[[view]], GeoMeans_Lrn = GeoMeans_Lrn[[view]])
+    return(YTrgSS)
+  }, YTrgSS, GeoMeans_Lrn)
+  
+  TL_param = initTransferLearningParamaters(YTrgSS, views, expdat_meta_Lrn, Fctrzn, likelihoods)
+  
   return(TL_param)
 }
 

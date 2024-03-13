@@ -45,7 +45,7 @@ TrgDirSS <- "Trg_PAAD_SS5_5000D/"
 
 
 ## TL PARAMETERS
-LrnSimple = TRUE ## if TRUE then E[W^2] and E[LnTau] are calculated form E[W] and E[Tau] otherwise imported
+## LrnSimple = TRUE ## if TRUE then E[W^2] and E[LnTau] are calculated form E[W] and E[Tau] otherwise imported
 CenterTrg = FALSE # Center Trg with own means or use estimated intercepts?
 
 if (CenterTrg){
@@ -53,7 +53,6 @@ if (CenterTrg){
 } else {
   TLDirName = 'TL_VI'
 }
-
 
 # ------------------------------------------- LEARNING SET ----
 
@@ -76,10 +75,10 @@ MLrn = Fctrzn@dimensions$M
 Fctrzn@expectations[["Tau"]] = Tau_init(viewsLrn, Fctrzn, InputModel)
 
 ## E[log(tau)] CALCULATION (ONLY RELEVANT FOR GAUSSIAN DATA)
-Fctrzn@expectations[["TauLn"]] = sapply(viewsLrn, TauLn_calculation, likelihoodsLrn, LrnSimple, Fctrzn, LrnFctrnDir)
+Fctrzn@expectations[["TauLn"]] = sapply(viewsLrn, TauLn_calculation, likelihoodsLrn, Fctrzn, LrnFctrnDir)
 
 ## load or calculate E[W^2] values
-Fctrzn@expectations[["WSq"]] = sapply(viewsLrn, WSq_calculation, LrnSimple, Fctrzn, LrnFctrnDir)
+Fctrzn@expectations[["WSq"]] = sapply(viewsLrn, WSq_calculation, Fctrzn, LrnFctrnDir)
 
 ## import the W intercepts if not centering, create vectors containing 0s if centering
 Fctrzn@expectations[["W0"]] = sapply(viewsLrn, W0_calculation, CenterTrg, Fctrzn, LrnFctrnDir)
@@ -142,13 +141,18 @@ for(ss in 1:brcds_SS$SS_count){
   ## extract sample ids for the subset
   smpls = brcds_SS$smpls_SS[[SS]]
   
+  ## Prepare YTrg subset data 
+  YTrgSS = TCGATargetDataPreparation(views = views, YTrgFull = YTrgFull, brcds_SS = brcds_SS, 
+                                     SS = SS, Fctrzn = Fctrzn, smpls = smpls, expdat_meta_Lrn = expdat_meta_Lrn)
+  
   ## INIT PARAMETERS
-  TL_param = initTransferParameters(views = views, brcds_SS = brcds_SS, YTrgFull = YTrgFull, 
-                                    Fctrzn = Fctrzn, likelihoods = likelihoods, SS = SS, expdat_meta_Lrn = expdat_meta_Lrn)
+  TL_param = initTransferLearningParamaters(views = views, YTrg = YTrgSS, Fctrzn = Fctrzn, 
+                                            likelihoods = likelihoods, expdat_meta_Lrn = expdat_meta_Lrn)
   
   ## TRANSFER LEARNING
-  transferLearning_function(TL_param = TL_param, MaxIterations, MinIterations, Fctrzn_Lrn_W, Fctrzn_Lrn_W0, minFactors, 
-                            StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH, PoisRateCstnt)
+  transferLearning_function(TL_param = TL_param, MaxIterations, MinIterations, minFactors, 
+                            StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH, PoisRateCstnt, 
+                            outputDir = TL_SSOutDir)
   
   ## save overall meta data
   script_end_time = Sys.time()
@@ -167,7 +171,7 @@ for(ss in 1:brcds_SS$SS_count){
     'ConvergenceTH' = ConvergenceTH,
     'ConvergenceIts' = ConvergenceIts,
     'PoisRateCstnt' = PoisRateCstnt,
-    'LrnSimple' = LrnSimple,
+    'LrnSimple' = TRUE,
     'script_start_time' = script_start_time,
     'loop_start_time' = loop_start_time,
     'script_end_time' = script_end_time
