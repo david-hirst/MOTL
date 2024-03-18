@@ -182,7 +182,7 @@ preprocessCountsData <- function(view, YTrg_list, normalization = FALSE, expdat_
   return(YTrg)
 }
 
-TargetDataPreparation <- function(view, YTrg_list, Fctrzn, smpls, expdat_meta_Lrn, normalization = FALSE, transformation = FALSE){
+TargetDataPreparation <- function(views, YTrg_list, Fctrzn, smpls, expdat_meta_Lrn, normalization = FALSE, transformation = FALSE){
   #'
   #'
   #'
