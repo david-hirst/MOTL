@@ -116,7 +116,6 @@ MaxIterations = 3
 MinIterations = 2 # as per MOFA with defaults in python, >= 2 (hardcoded floor), exl initial setup
 ConvergenceIts = 2 # as per MOFA python defaults
 ConvergenceTH = 0.0005 # default for MOFA - fast option
-PoisRateCstnt = 0.0001 ## amount to add to the poison rate function to avoid errors
 
 ## import predefined subset information
 brcds_SS = readRDS(file.path(TrgDirSS,'brcds_SS.rds'))
@@ -150,9 +149,10 @@ for(ss in 1:brcds_SS$SS_count){
                                             likelihoods = likelihoods, expdat_meta_Lrn = expdat_meta_Lrn)
   
   ## TRANSFER LEARNING
-  transferLearning_function(TL_param = TL_param, MaxIterations, MinIterations, minFactors, 
-                            StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH, PoisRateCstnt, 
-                            outputDir = TL_SSOutDir)
+  TL_output <- transferLearning_function(TL_param = TL_param, MaxIterations= MaxIterations, MinIterations = MinIterations, minFactors = minFactors, 
+                            StartDropFactor = StartDropFactor, FreqDropFactor = FreqDropFactor, StartELBO = StartELBO, 
+                            FreqELBO = FreqELBO, DropFactorTH = DropFactorTH, ConvergenceIts = ConvergenceIts, ConvergenceTH = ConvergenceTH, 
+                            CenterTrg = CenterTrg, outputDir = TL_SSOutDir)
   
   ## save overall meta data
   script_end_time = Sys.time()
@@ -170,7 +170,7 @@ for(ss in 1:brcds_SS$SS_count){
     'FreqELBO' = FreqELBO,
     'ConvergenceTH' = ConvergenceTH,
     'ConvergenceIts' = ConvergenceIts,
-    'PoisRateCstnt' = PoisRateCstnt,
+    'PoisRateCstnt' = TL_output$PoisRateCstnt,
     'LrnSimple' = TRUE,
     'script_start_time' = script_start_time,
     'loop_start_time' = loop_start_time,

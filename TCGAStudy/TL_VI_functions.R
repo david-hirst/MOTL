@@ -637,8 +637,8 @@ W0_calculation <- function(view, CenterTrg, Fctrzn, LrnFctrnDir){
 }
 
 transferLearning_function <- function(TL_param, MaxIterations, MinIterations, minFactors, 
-                                      StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH, 
-                                      PoisRateCstnt, outputDir = "./"){
+                                      StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH,
+                                      CenterTrg, PoisRateCstnt = 0.0001, outputDir = "./"){
   #'
   #' Transfer Learning with Variational Inference
   #'
@@ -666,6 +666,7 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   Fctrzn_Lrn_WSq <- TL_param$Fctrzn_Lrn_WSq
   Tau <- TL_param$Tau
   TauLn <- TL_param$TauLn
+  smpls = rownames(TL_param$YTrg[[1]])
   
   ## INIT PARAMETERS
   ELBO = numeric()
@@ -689,17 +690,31 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
       SS_tmp <- sapply(views, function(view, YGauss, ZMu_0, Fctrzn_Lrn_W0){
         SS_tmp <- sum((YGauss[[view]] - (matrix(ZMu_0,ncol = 1) %*% t(Fctrzn_Lrn_W0[[view]])))^2, na.rm=TRUE)
         return(SS_tmp)
-      }, YGauss, ZMu_0, Fctrzn_Lrn_W0)
+      }, YGauss, ZMu_0, Fctrzn_Lrn_W0, simplify = FALSE)
       
-      var_expl_max <- numeric()
-      for (k in 1:dim(ZMu)[2]){
-        var_expl_tmp <- unlist(lapply(views, function(view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
-          RSS_tmp = sum((YGauss[[view]] - (cbind(ZMu_0,ZMu[,k]) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]][,k]))))^2, na.rm=TRUE)
+      #SS_tmp = lapply(split(SS_tmp, names(SS_tmp)), unname)
+      
+      VarExpl = sapply(views, function(view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
+        factorNames = colnames(ZMu)
+        var_expl_tmp = sapply(factorNames, function(factorName, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
+          RSS_tmp = sum((YGauss[[view]] - (cbind(ZMu_0,ZMu[,factorName]) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]][,factorName]))))^2, na.rm=TRUE)
           var_expl_tmp = 1-(RSS_tmp/SS_tmp[[view]])
           return(var_expl_tmp)
-        }, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp))
-        var_expl_max <- c(var_expl_max, max(var_expl_tmp))
-      }
+          }, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
+        return(var_expl_tmp)
+        }, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
+      var_expl_max <- apply(VarExpl,1,max)
+      print(head(VarExpl))
+      
+      # var_expl_max <- numeric()
+      # for (k in 1:dim(ZMu)[2]){
+      #   var_expl_tmp <- unlist(lapply(views, function(view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
+      #     RSS_tmp = sum((YGauss[[view]] - (cbind(ZMu_0,ZMu[,k]) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]][,k]))))^2, na.rm=TRUE)
+      #     var_expl_tmp = 1-(RSS_tmp/SS_tmp[[view]])
+      #     return(var_expl_tmp)
+      #   }, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp))
+      #   var_expl_max <- c(var_expl_max, max(var_expl_tmp))
+      # }
       
       ## drop factor with lowest max variance explained if below the threshold
       if (min(var_expl_max)<DropFactorTH){
@@ -745,6 +760,8 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
       ZMu = matrix(data=as.vector(colMeans(Fctrzn@expectations$Z$group0)),
                    nrow = dim(ZVar)[1], ncol = dim(ZVar)[2],
                    byrow = TRUE)
+      rownames(ZMu) = smpls
+      colnames(ZMu) = colnames(Fctrzn_Lrn_W[[1]])
       
       # vector of 1s to act as multiplier of W intercept term
       ZMu_0 = rep(1,dim(ZVar)[1])
@@ -772,7 +789,7 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
     ## And B_nd = \sum_{k} E[(z_{n,k})^2]E[(w_{d,k})^2]
     ## E_ZWSq_nd = (A + B)_nd = (square(ZMu%*%t(W)) - square(ZMu)%*%square(t(W)) + ZMuSq%*%t(WSq))_nd
     
-    print("Exepected")
+    print("Expected")
     E_ZE_W <- sapply(views, E_ZE_W_update, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W)
     E_Z_SqE_W_Sq <- sapply(views, E_Z_SqE_W_Sq_update, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W)
     E_ZSqE_WSq <- sapply(views, E_ZSqE_WSq_update, ZMu_0, ZMuSq, Fctrzn_Lrn_W0, Fctrzn_Lrn_WSq)
@@ -818,8 +835,8 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   }
   
   # add names where necessary
-  rownames(ZMu) = smpls
-  colnames(ZMu) = colnames(Fctrzn_Lrn_W[[1]])
+  # rownames(ZMu) = smpls
+  # colnames(ZMu) = colnames(Fctrzn_Lrn_W[[1]])
   
   # export the data for further analysis
   ss_end_time = Sys.time()
@@ -842,6 +859,11 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
               'E_ZE_W', 'E_Z_SqE_W_Sq', 'E_ZSqE_WSq', 'E_ZWSq', "ZMuSq", "Fctrzn_Lrn_WSq", "Tau", "TauLn", "ZVar", "Zeta"))
   
   invisible(gc())
+  
+  TL_output <- list(
+    "PoisRateCstnt" = PoisRateCstnt,
+    "VarExpl" = VarExpl
+  )
 }
 
 
@@ -1025,27 +1047,3 @@ TCGAinitTransferLearningParamaters <- function(YTrgFull, views, brcds_SS, SS, ex
   
   return(TL_param)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
