@@ -63,7 +63,7 @@ script_start_time = Sys.time()
 ## METADATA
 expdat_meta_Lrn = readRDS(file.path(LrnDir,"expdat_meta.rds"))
 
-## FATORIZATION MODEL OBJECT
+## FACTORIZATION MODEL OBJECT
 InputModel = file.path(LrnFctrnDir,"Model.hdf5")
 Fctrzn = load_model(file = InputModel)
 

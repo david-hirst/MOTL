@@ -4,18 +4,19 @@
 
 TCGATargetDataPrefiltering <- function(view, brcds_SS, SS, YTrgFull, Fctrzn){
   #' 
-  #' Prepare target subset data
+  #' Filter out TCGA target subset data according variance
   #' 
   #' Extract data for the given sample names (brcds_SS)
   #' Remove features with variance equal to zero
+  #' Match features between training set and learning set
   #' 
   #'
   #' @param view current view name data
   #' @param brcds_SS list of subset sample names for each subset number/view
   #' @param SS current subset number
-  #' @param YTrgFull
-  #' @param Fctrzn
-  #' @returns YTrgSS
+  #' @param YTrgFull named list of training set data
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @returns the subset data for current view and SS number
   
   print(view)
   
@@ -47,10 +48,26 @@ TCGATargetDataPrefiltering <- function(view, brcds_SS, SS, YTrgFull, Fctrzn){
 
 TCGATargetDataPreparation <- function(views, YTrgFull, brcds_SS, SS, Fctrzn, smpls, normalization = "Lrn", expdat_meta_Lrn, transformation = TRUE){
   #'
-  #'
-  #'
-  #'
-  #'
+  #' Prepare TCGA data for transfer learning
+  #' 
+  #' Filter out features according variance
+  #' Reshape data into matrices
+  #' Order samples to have the same columns order between different data
+  #' Normalize and/or transform counts data (DESeq2 normalization)
+  #' If normalization = FALSE: no normalization
+  #' If normalization = "Lrn": normalize with learning set geomeans
+  #' If normalization = "Trg": normalize without geomeans
+  #' 
+  #' @param views list of data names
+  #' @param YTrgFull named list of training data
+  #' @param brcds_SS list of subset sample names for each subset number/view
+  #' @param SS current subset number
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @param smpls sample names
+  #' @param normalization FALSE or "Lrn" or "Trg"
+  #' @param expdat_meta_Lrn list of learning set factorization metadata
+  #' @param transformation FALSE or TRUE
+  #' @returns list of prepared subset data for the current subset number
   
   print("Feature prefiltering")
   
@@ -86,20 +103,22 @@ TCGATargetDataPreparation <- function(views, YTrgFull, brcds_SS, SS, Fctrzn, smp
 
 ## ----------------------------------------- INIT PARAMETERS ----
 
+## TRAINING DATA
+
 TargetDataPrefiltering <- function(view, YTrg_list, Fctrzn, smpls){
   #'
   #' Prepare the target data for a given view
   #' 
   #' Remove the features with variance equal to zero
   #' Harmonize features between the target data and the learning data 
-  #' (keep only commun features)
+  #' (keep only shared features)
   #' Order columns based on give sample order (smpls)
   #'
   #' @param view current view data name
   #' @param YTrg_list named list of data
-  #' @param Fctrzn
+  #' @param Fctrzn learning factorization model object (from MOFA)
   #' @param smpls ordered vector of sample names
-  #' @returns 
+  #' @returns prepared data for the current view
   
   YTrg = YTrg_list[[view]]
   
@@ -125,7 +144,13 @@ TargetDataPrefiltering <- function(view, YTrg_list, Fctrzn, smpls){
 
 GeoMeans_Lrn_init <- function(view, expdat_meta_Lrn, YTrgFtrs){
   #'
-  #'
+  #' Retrieve the calculated geomeans of the learning set
+  #' 
+  #' @param view current view data name
+  #' @param expdat_meta_Lrn list of learning set factorization metadata
+  #' @param YTrgFtrs feature names of the current view
+  #' @returns calculated geomeans of the learning set
+  
   if (is.element(view,c('mRNA', 'miRNA'))){
     GeoMeans_Lrn = expdat_meta_Lrn[[paste0('GeoMeans_',view)]]
     FtrsKeep = is.element(names(GeoMeans_Lrn),YTrgFtrs)
@@ -140,12 +165,18 @@ GeoMeans_Lrn_init <- function(view, expdat_meta_Lrn, YTrgFtrs){
 
 preprocessCountsData <- function(view, YTrg_list, normalization = FALSE, expdat_meta_Lrn, transformation = FALSE){
   #'
+  #' Normalize and/or transform counts data
+  #' 
+  #' If normalization = FALSE: no normalization
+  #' If normalization = "Lrn": normalize with learning set geomeans
+  #' If normalization = "Trg": normalize without geomeans
+  #'
   #' @param view current data view name
-  #' @param YTrg_list list of training data
-  #' @param normalization FALSE, or "Lrn", or "Trg"
-  #' @param expdat_meta_Lrn
+  #' @param YTrg_list named list of training data
+  #' @param normalization FALSE or "Lrn" or "Trg" 
+  #' @param expdat_meta_Lrn list of learning set factorization metadata
   #' @param transformation boolean
-  #' @returns
+  #' @returns transformed/normalized counts data for the current view
   
   ## Select current data
   YTrg = YTrg_list[[view]]
@@ -184,10 +215,19 @@ preprocessCountsData <- function(view, YTrg_list, normalization = FALSE, expdat_
 
 TargetDataPreparation <- function(views, YTrg_list, Fctrzn, smpls, expdat_meta_Lrn, normalization = FALSE, transformation = FALSE){
   #'
+  #' Prepare data for the transfer learning
+  #' 
+  #' Filter out features according variance
+  #' Normalize/transform counts data
   #'
-  #'
-  #'
-  #'
+  #' @param views list of data names
+  #' @param YTrg_list named list of training data
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @param smpls sample names
+  #' @param normalization FALSE or "Lrn" or "Trg"
+  #' @param expdat_meta_Lrn list of learning set factorization metadata
+  #' @param transformation FALSE or TRUE
+  #' @returns list of prepared subset data for the current subset number
   
   ## Feature variance prefiltering and feature harmonization
   print("Feature prefiltering")
@@ -205,7 +245,6 @@ initTransferLearningParamaters <- function(YTrg, views, expdat_meta_Lrn, Fctrzn,
   #'
   #' Transfer Learning parameters initialization
   #' 
-  #' Extract calculated geomeans from learning set for counts data
   #' Extract the factorized learning set weight intercepts (from MOFA)
   #' Extract the factorized learning set weights (from MOFA)
   #' Extract the factorized learning set squared weights (from MOFA)
@@ -215,11 +254,11 @@ initTransferLearningParamaters <- function(YTrg, views, expdat_meta_Lrn, Fctrzn,
   #' 
   #' @param YTrg named list of data (data should have the same order of the columns)
   #' @param views vector of data names
-  #' @param expdat_meta_Lrn list of learning set metadata 
-  #' @param Fctrzn 
-  #' @param likelihoods
-  #' @returns TL_param list of parameters 
-  #' (YTrg, GeoMeans_Lrn, Fctrzn_Lrn_W0, Fctrzn_Lrn_WFctrzn_Lrn_WSq, Tau, TauLn)
+  #' @param expdat_meta_Lrn list of learning set factorization metadata
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @param likelihoods list of data types
+  #' @returns list of initialized parameters for transfer learning
+  #' (YTrg, Fctrzn_Lrn_W0, Fctrzn_Lrn_WFctrzn_Lrn_WSq, Tau, TauLn)
   #' 
   
   ## Feature names in each data
@@ -290,7 +329,6 @@ initTransferLearningParamaters <- function(YTrg, views, expdat_meta_Lrn, Fctrzn,
   }, likelihoods, Fctrzn, YTrg, YTrgFtrs)
   
   ## transpose matrices where necessary - to make them samples x features
-  ## MT to check
   YTrg <- lapply(YTrg, t)
   Tau = lapply(Tau, t)
   TauLn = lapply(TauLn, t)
@@ -307,44 +345,16 @@ initTransferLearningParamaters <- function(YTrg, views, expdat_meta_Lrn, Fctrzn,
   return(TL_param)
 }
 
-## --------------------------------------------------------------
-
-
-## ----------------------------- TRANSFER LEARNING FUNCTIONS ----
-
-## MT - question for david, where is the poisson calculation ?
-## MT - Zeta matrix ?
-Zeta_calculation <- function(view, likelihoods, E_ZWSq, E_ZE_W){
-  #'
-  #' Calculate the Zeta matrix for the current data view
-  #' 
-  #' Zeta values used for non-gaussian data
-  #' for poisson Zeta_nd = E[\sum_{k} z_{n,k} w_{d,k}] so Zeta = ZMu %*% t(W)
-  #' for bernoulli Zeta_nd = sqrt(E[(\sum_{k} z_{n,k} w_{d,k})^2])
-  #' 
-  #' @param view current data view name
-  #' @param likelihoods list of data types
-  #' @param E_ZWSq 
-  #' @param E_ZE_W
-  #' @returns Zeta Zeta matrix for the current data view
-  
-  if (likelihoods[[view]]=="bernoulli"){
-    Zeta = sqrt(E_ZWSq[[view]])
-  } else{
-    Zeta = E_ZE_W[[view]]
-  }
-  
-  return(Zeta)
-}
+## LEARNING DATA
 
 Tau_init <- function(viewsLrn, Fctrzn, InputModel){
   #' 
   #' Initialization of the Tau values for each view
   #' 
-  #' @param viewsLrn
-  #' @param Fctrzn
-  #' @param InputModel
-  #' @returns 
+  #' @param viewsLrn list of view in learning set
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @param InputModel factorization model object of learning set (from MOFA)
+  #' @returns named list of Tau matrices
   
   ## Extract Tau from the factorization of the learning set
   Tau <- h5read(InputModel, "expectations/Tau")
@@ -360,33 +370,18 @@ Tau_init <- function(viewsLrn, Fctrzn, InputModel){
   return(Tau)
 }
 
-## MT - Tau matrix ?
-Tau_calculation <- function(view, likelihoods, Zeta, Tau){
-  #'
-  #' Update Tau values which only change for bernoulli data
-  #' 
-  #' @param view current view data name
-  #' @param likelihoods list of data types
-  #' @param Zeta Zeta matrix for the current view
-  #' @param Tau 
-  #' @returns Tau the (updated) Tau matrix for the current view data
-  
-  if (likelihoods[[view]]=="bernoulli"){
-    Tau = (1/2)*(1/Zeta[[view]])*tanh(Zeta[[view]]/2)
-  } else {
-    Tau = Tau[[view]]
-  }
-  return(Tau)
-}
-
+## MT - maybe change name into TauLn_init ?
+## MT - view = viewsLrn ?
 TauLn_calculation <- function(view, likelihoodsLrn, Fctrzn, LrnFctrnDir, LrnSimple = TRUE){
   #'
-  #' @param view
-  #' @param likelihoodsLrn
-  #' @param LrnSimple
-  #' @param Fctrzn
-  #' @param LrnFctrnDir
-  #' @returns
+  #' Initialization of the log(Tau) values for each learning view
+  #'
+  #' @param view current learning view name
+  #' @param likelihoodsLrn type of data in the learning set
+  #' @param LrnSimple if TRUE then E[W^2] and E[LnTau] are calculated from E[W] and E[Tau] otherwise imported
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @param LrnFctrnDir directory where log(Tau) values are saved
+  #' @returns log(Tau) matrix for the current view
   
   if (likelihoodsLrn[view]=="gaussian"){
     if (LrnSimple){
@@ -401,6 +396,98 @@ TauLn_calculation <- function(view, likelihoodsLrn, Fctrzn, LrnFctrnDir, LrnSimp
   return(TauLn)
 }
 
+## MT - maybe change name into WSq_init ?
+## MT - explain LrnSimple input
+WSq_calculation <- function(view, Fctrzn, LrnFctrnDir, LrnSimple = TRUE){
+  #'
+  #' load or calculate E[W^2] values
+  #' factors were ordered in the same way as for other latent variables
+  #' if any factors are dropped due to being inactive, they are at the end of the dataset
+  #' so can filter based on dimension of W
+  #' 
+  #' @param view current view name
+  #' @param LrnSimple 
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @param LrnFctrnDir directory where WSq values are saved
+  #' @returns weights squared matrix for the current view
+  
+  if (LrnSimple){
+    WSq = (Fctrzn@expectations[["W"]][[view]])^2
+  } else {
+    WSq = read.csv(file.path(LrnFctrnDir,paste0("WSq_",view,".csv")),header=FALSE)
+    WSq = as.matrix(WSq)[,1:dim(Fctrzn@expectations[["W"]][[view]])[2]]
+    rownames(WSq)=rownames(Fctrzn@expectations[["W"]][[view]])
+  }
+  return(WSq)
+}
+
+## MT - maybe change name into W0_init ?
+W0_calculation <- function(view, CenterTrg, Fctrzn, LrnFctrnDir){
+  #'
+  #' Initialization of the weight intercept
+  #' 
+  #' @param view current view data name
+  #' @param CenterTrg use (FALSE) or not (TRUE) use estimated intercepts
+  #' @param Fctrzn learning factorization model object (from MOFA)
+  #' @param LrnFctrnDir directory where estimated intercept values are saved
+  #' @returns weight intercepts values of tjhe current data
+  
+  if (CenterTrg){
+    W0 = Fctrzn@expectations[["W"]][[view]][,1]*0
+  } else {
+    EstInts = readRDS(file.path(LrnFctrnDir,"EstimatedIntercepts.rds"))
+    EstInts = EstInts$Intercepts
+    W0 = EstInts[[view]]
+  }
+  return(W0)
+}
+
+## --------------------------------------------------------------
+
+
+## ----------------------------- TRANSFER LEARNING FUNCTIONS ----
+
+Zeta_calculation <- function(view, likelihoods, E_ZWSq, E_ZE_W){
+  #'
+  #' Calculate the Zeta matrix for the current data view
+  #' 
+  #' Zeta values used for non-gaussian data
+  #' for poisson Zeta_nd = E[\sum_{k} z_{n,k} w_{d,k}] so Zeta = ZMu %*% t(W)
+  #' for bernoulli Zeta_nd = sqrt(E[(\sum_{k} z_{n,k} w_{d,k})^2])
+  #' 
+  #' @param view current data view name
+  #' @param likelihoods list of data types
+  #' @param E_ZWSq 
+  #' @param E_ZE_W
+  #' @returns Zeta matrix for the current data view
+  
+  if (likelihoods[[view]]=="bernoulli"){
+    Zeta = sqrt(E_ZWSq[[view]])
+  } else{
+    Zeta = E_ZE_W[[view]]
+  }
+  
+  return(Zeta)
+}
+
+Tau_calculation <- function(view, likelihoods, Zeta, Tau){
+  #'
+  #' Update Tau values which only change for bernoulli data
+  #' 
+  #' @param view current view data name
+  #' @param likelihoods list of data types
+  #' @param Zeta Zeta matrix for the current view
+  #' @param Tau list of tau matrices
+  #' @returns (updated) Tau matrix for the current view data
+  
+  if (likelihoods[[view]]=="bernoulli"){
+    Tau = (1/2)*(1/Zeta[[view]])*tanh(Zeta[[view]]/2)
+  } else {
+    Tau = Tau[[view]]
+  }
+  return(Tau)
+}
+
 YGauss_calculation <- function(view, likelihoods, YTrg, Zeta, Tau, CenterTrg){
   #' 
   #' Initialize or update pseudo Y values (YGauss)
@@ -413,10 +500,10 @@ YGauss_calculation <- function(view, likelihoods, YTrg, Zeta, Tau, CenterTrg){
   #' @param view current view name
   #' @param likelihoods list of data types
   #' @param YTrg current data matrix
-  #' @param Zeta
-  #' @param Tau
-  #' @param CenterTrg
-  #' @returns YGauss
+  #' @param Zeta list of Zeta matrices
+  #' @param Tau list of Tau matrices
+  #' @param CenterTrg use (FALSE) or not (TRUE) use estimated intercepts
+  #' @returns pseudo Y values for the current view
   
   if (likelihoods[[view]]=="poisson"){
     YGauss = Zeta[[view]] - plogis(Zeta[[view]])*(1-YTrg[[view]]/(log(1+exp(Zeta[[view]])) + PoisRateCstnt))/Tau[[view]]
@@ -441,9 +528,9 @@ ZVar_calculation <- function(view, Tau, Fctrzn_Lrn_WSq){
   #' based on the appendix of the mofa paper and Github code
   #' 
   #' @param view current data view name
-  #' @param Tau
-  #' @param Fctrzn_Lrn_WSq 
-  #' @returns ZVar_m the calculated Z variances matrix for the current data
+  #' @param Tau list of Tau matrices
+  #' @param Fctrzn_Lrn_WSq Factorized learning set squared weights
+  #' @returns calculated Z variances matrix for the current data
   
   ZVar_m = Tau[[view]] %*% Fctrzn_Lrn_WSq[[view]]
   return(ZVar_m)
@@ -454,14 +541,14 @@ ZMu_calculation <- function(view, k, Fctrzn_Lrn_W, Fctrzn_Lrn_W0, Tau, ZMu_0, ZM
   #' Z mu calculation for the current data
   #' 
   #' @param view current data view name
-  #' @param k
-  #' @param Fctrzn_Lrn_W
-  #' @param Fctrzn_Lrn_W0
-  #' @param Tau
-  #' @param ZMu_0
-  #' @param ZMu
-  #' @param YGauss
-  #' @returns 
+  #' @param k feature index in the current data
+  #' @param Fctrzn_Lrn_W list of Factorized learning set weight matrices
+  #' @param Fctrzn_Lrn_W0 list of factorized learning set weight intercept matrices
+  #' @param Tau list of Tau matrices
+  #' @param ZMu_0 list of ZMu intercepts matrices
+  #' @param ZMu list of ZMu matrices
+  #' @param YGauss list of pseudo Y value matrices
+  #' @returns ZMu values for the current view
   
   ZMu_tmp1 = matrix(Fctrzn_Lrn_W[[view]][,k], nrow=dim(Tau[[view]])[1],ncol=dim(Tau[[view]])[2],byrow = TRUE)
   ZMu_tmp1 = Tau[[view]] * ZMu_tmp1
@@ -485,15 +572,15 @@ ELBO_calculation <- function(view, likelihoods, Tau, TauLn, E_ZWSq, E_ZE_W, Zeta
   #' they used the raw uncentered data for the elbo - this seems strange
   #' although i guess it acts as a lower bound for the lower bound ...
   #'
-  #' @param view
-  #' @param likelihoods
-  #' @param Tau
-  #' @param TauLn
+  #' @param view current view dara name
+  #' @param likelihoods list of data types
+  #' @param Tau list of Tau matrices
+  #' @param TauLn list of log(Tau) matrices
   #' @param E_ZWSq
-  #' @param E_ZE_W
-  #' @param Zeta
-  #' @param YTrg
-  #' @param YGauss
+  #' @param E_ZE_W 
+  #' @param Zeta list of Zeta matrices
+  #' @param YTrg list of data
+  #' @param YGauss list of pseudo Y value matrices
   #' @returns 
   
   if(likelihoods[[view]]=="poisson"){
@@ -538,11 +625,11 @@ E_ZE_W_update <- function(view, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W){
   #' 
   #' Calculate 
   #'
-  #' @param view
-  #' @param ZMu_0
-  #' @param ZMu
-  #' @param Fctrzn_Lrn_W0
-  #' @param Fctrzn_Lrn_W
+  #' @param view current view name
+  #' @param ZMu_0 list of ZMu intercept matrices
+  #' @param ZMu list of ZMu matrices
+  #' @param Fctrzn_Lrn_W0 list of factorized learning set weight intercept matrices
+  #' @param Fctrzn_Lrn_W list of factorized learning set weight matrices
   #' @returns 
   
   E_ZE_W = cbind(ZMu_0,ZMu) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]]))
@@ -553,11 +640,11 @@ E_Z_SqE_W_Sq_update <- function(view, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W){
   #' 
   #' Calculate 
   #'
-  #' @param view
-  #' @param ZMu_0
-  #' @param ZMu
-  #' @param Fctrzn_Lrn_W0
-  #' @param Fctrzn_Lrn_W
+  #' @param view current view name
+  #' @param ZMu_0 list of ZMu intercept matrices
+  #' @param ZMu list of ZMu matrices
+  #' @param Fctrzn_Lrn_W0 list of factorized learning set weight intercept matrices
+  #' @param Fctrzn_Lrn_W list of factorized learning set weight matrices
   #' @returns 
   
   E_Z_SqE_W_Sq = (cbind(ZMu_0,ZMu)^2) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]])^2)
@@ -568,11 +655,11 @@ E_ZSqE_WSq_update <- function(view, ZMu_0, ZMuSq, Fctrzn_Lrn_W0, Fctrzn_Lrn_WSq)
   #' 
   #' Calculate 
   #'
-  #' @param view
-  #' @param ZMu_0
-  #' @param ZMuSq
-  #' @param Fctrzn_Lrn_W0
-  #' @param Fctrzn_Lrn_WSq
+  #' @param view current view name
+  #' @param ZMu_0 list of ZMu intercept matrices
+  #' @param ZMuSq list of ZMu squared matrices
+  #' @param Fctrzn_Lrn_W0 list of factorized learning set weight intercept matrices
+  #' @param Fctrzn_Lrn_WSq  list of factorized learning set weight squared matrices
   #' @returns 
   
   E_ZSqE_WSq = cbind(ZMu_0^2,ZMuSq) %*% t(cbind(Fctrzn_Lrn_W0[[view]]^2,Fctrzn_Lrn_WSq[[view]]))
@@ -583,9 +670,9 @@ E_ZWSq_update <- function(view, E_ZE_W, ZMuSq, E_Z_SqE_W_Sq, E_ZSqE_WSq){
   #' 
   #' Calculate 
   #'
-  #' @param view
+  #' @param view current view name
   #' @param E_ZE_W
-  #' @param ZMuSq
+  #' @param ZMuSq list of ZMu squared matrices
   #' @param E_Z_SqE_W_Sq
   #' @param E_ZSqE_WSq
   #' @returns 
@@ -594,47 +681,7 @@ E_ZWSq_update <- function(view, E_ZE_W, ZMuSq, E_Z_SqE_W_Sq, E_ZSqE_WSq){
   return(E_ZWSq)
 }
 
-WSq_calculation <- function(view, Fctrzn, LrnFctrnDir, LrnSimple = TRUE){
-  #'
-  #' load or calculate E[W^2] values
-  #' factors were ordered in the same way as for other latent variables
-  #' if any factors are dropped due to being inactive, they are at the end of the dataset
-  #' so can filter based on dimension of W
-  #' 
-  #' @param view
-  #' @param LrnSimple
-  #' @param Fctrzn
-  #' @param LrnFctrnDir
-  #' @returns 
-  
-  if (LrnSimple){
-    WSq = (Fctrzn@expectations[["W"]][[view]])^2
-  } else {
-    WSq = read.csv(file.path(LrnFctrnDir,paste0("WSq_",view,".csv")),header=FALSE)
-    WSq = as.matrix(WSq)[,1:dim(Fctrzn@expectations[["W"]][[view]])[2]]
-    rownames(WSq)=rownames(Fctrzn@expectations[["W"]][[view]])
-  }
-  return(WSq)
-}
 
-W0_calculation <- function(view, CenterTrg, Fctrzn, LrnFctrnDir){
-  #'
-  #' 
-  #' @param view
-  #' @param CenterTrg
-  #' @param Fctrzn
-  #' @param LrnFctrnDir
-  #' @returns 
-  
-  if (CenterTrg){
-    W0 = Fctrzn@expectations[["W"]][[view]][,1]*0
-  } else {
-    EstInts = readRDS(file.path(LrnFctrnDir,"EstimatedIntercepts.rds"))
-    EstInts = EstInts$Intercepts
-    W0 = EstInts[[view]]
-  }
-  return(W0)
-}
 
 transferLearning_function <- function(TL_param, MaxIterations, MinIterations, minFactors, 
                                       StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH,
@@ -642,20 +689,21 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   #'
   #' Transfer Learning with Variational Inference
   #'
-  #' @param TL_param
-  #' @param MaxIterations
-  #' @param MinIterations
-  #' @param minFactors
-  #' @param StartDropFactor
-  #' @param FreqDropFactor
-  #' @param StartELBO
-  #' @param FreqELBO
-  #' @param DropFactorTH
+  #' @param TL_param list of initialized parameters for transfer learning
+  #' @param MaxIterations maximum number of iteration
+  #' @param MinIterations minimum number of iteration
+  #' @param minFactors minimum number of factors
+  #' @param StartDropFactor after which iteration to start dropping factors
+  #' @param FreqDropFactor how often to drop factors
+  #' @param StartELBO which iteration to start checking ELBO on
+  #' @param FreqELBO how often to assess the ELBO
+  #' @param DropFactorTH factor with lowest max variance, that is less than this, is dropped
   #' @param ConvergenceIts
-  #' @param ConvergenceTH
-  #' @param PoisRateCstnt
-  #' @param outputDir
-  #' @returns
+  #' @param ConvergenceTH 
+  #' @param CenterTrg Center Trg with own means or use estimated intercepts
+  #' @param PoisRateCstnt amount to add to the poison rate function to avoid errors
+  #' @param outputDir output directory name
+  #' @returns list of two parameters: PoisRateCstnt and final explained variance matrix
   
   ss_fit_start_time = Sys.time()
   
@@ -676,7 +724,6 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   for (It in 0:MaxIterations){
     
     PrintMessage = paste0("It=",It)
-    print(It)
     
     ## Drop factors explaining variance below threshold using MOFA formula:  
     # SS = np.square(Y[m][gg, :]).sum()
@@ -868,182 +915,3 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
 
 
 ## --------------------------------------------------------------
-
-## MT to remove
-initTransferParameters_oldVersion <- function(views, brcds_SS, SS, YTrgFull, Fctrzn, likelihoods, expdat_meta_Lrn){
-  #'
-  #'
-  #' @param view view name of the current data
-  #' @param brcds_SS
-  #' @param YTrgFull 
-  #' @param Fctrzn
-  #' @param likelihoods
-  #' 
-  
-  ## Prepare YTrgSS
-  print("Prepare YTrgSS")
-  YTrgSS <- sapply(views, YTrgSS_preparation, brcds_SS = brcds_SS, SS = SS, YTrgFull = YTrgFull, Fctrzn = Fctrzn)
-  FtrsCommon <- lapply(YTrgSS, rownames)
-  
-  ## GeoMeans
-  print("Geomeans of learning set")
-  GeoMeans_Lrn <- sapply(views, function(view, expdat_meta_Lrn, FtrsCommon){
-    if (is.element(view,c('mRNA', 'miRNA'))){
-      GeoMeans_Lrn = expdat_meta_Lrn[[paste0('GeoMeans_',view)]]
-      FtrsKeep = is.element(names(GeoMeans_Lrn),FtrsCommon[[view]])
-      GeoMeans_Lrn = GeoMeans_Lrn[FtrsKeep]
-      GeoMeans_Lrn = GeoMeans_Lrn[match(FtrsCommon[[view]],names(GeoMeans_Lrn))]
-    } else {
-      GeoMeans_Lrn = numeric()
-    }
-    return(GeoMeans_Lrn)
-  }, expdat_meta_Lrn, FtrsCommon)
-  
-  ## FACTORIZED LEARNING WEIGHTS MATRIX ZERO
-  print("Factorized learning set weight intercepts")
-  Fctrzn_Lrn_W0 <- sapply(views, function(view, Fctrzn, FtrsCommon){
-    Fctrzn_Lrn_W0 = Fctrzn@expectations[["W0"]][[view]]
-    FtrsKeep = is.element(names(Fctrzn_Lrn_W0),FtrsCommon[[view]])
-    Fctrzn_Lrn_W0 = Fctrzn_Lrn_W0[FtrsKeep]
-    Fctrzn_Lrn_W0 = Fctrzn_Lrn_W0[match(FtrsCommon[[view]],names(Fctrzn_Lrn_W0))]
-    return(Fctrzn_Lrn_W0)
-  }, Fctrzn, FtrsCommon)
-  
-  ## FACTORIZED LEARNING WEIGHTS MATRIX
-  print("Factorized learning set weights")
-  Fctrzn_Lrn_W <- sapply(views, function(view, Fctrzn, FtrsCommon){
-    Fctrzn_Lrn_W = Fctrzn@expectations[["W"]][[view]]
-    FtrsKeep = is.element(rownames(Fctrzn_Lrn_W),FtrsCommon[[view]])
-    Fctrzn_Lrn_W = Fctrzn_Lrn_W[FtrsKeep,]
-    Fctrzn_Lrn_W = Fctrzn_Lrn_W[match(FtrsCommon[[view]],rownames(Fctrzn_Lrn_W)),]
-    return(Fctrzn_Lrn_W)
-  }, Fctrzn, FtrsCommon)
-  
-  ## FACTORIZED LEARNING WEIGHTS MATRIX SQUARED ?
-  print("Factorized learning set squared weights")
-  Fctrzn_Lrn_WSq <- sapply(views, function(view, Fctrzn, FtrsCommon){
-    Fctrzn_Lrn_WSq = Fctrzn@expectations[["WSq"]][[view]]
-    FtrsKeep = is.element(rownames(Fctrzn_Lrn_WSq),FtrsCommon[[view]])
-    Fctrzn_Lrn_WSq = Fctrzn_Lrn_WSq[FtrsKeep,]
-    Fctrzn_Lrn_WSq = Fctrzn_Lrn_WSq[match(FtrsCommon[[view]],rownames(Fctrzn_Lrn_WSq)),]
-    return(Fctrzn_Lrn_WSq)
-  }, Fctrzn, FtrsCommon)
-  
-  ## TAU PARAMETER
-  print("Tau")
-  Tau <- sapply(views, function(view, Fctrzn, YTrgSS, FtrsCommon){
-    Tau = Fctrzn@expectations[["Tau"]][[view]]$group0
-    FtrsKeep = is.element(rownames(Tau),FtrsCommon[[view]])
-    Tau = Tau[FtrsKeep,]
-    Tau = Tau[match(FtrsCommon[[view]],rownames(Tau)),]
-    Tau = matrix(rowMeans(Tau, na.rm = TRUE),
-                 nrow = dim(YTrgSS[[view]])[1], 
-                 ncol = dim(YTrgSS[[view]])[2], 
-                 byrow = FALSE)
-    rownames(Tau) = rownames(YTrgSS[[view]])
-    return(Tau)
-  }, Fctrzn, YTrgSS, FtrsCommon)
-  
-  
-  ## LOG TAU PARAMETER
-  print("LOG Tau")
-  TauLn <- sapply(views, function(view, likelihoods, Fctrzn, YTrgSS, FtrsCommon){
-    if (likelihoods[view]=="gaussian"){
-      TauLn = Fctrzn@expectations[["TauLn"]][[view]]
-      FtrsKeep = is.element(names(TauLn),FtrsCommon[[view]])
-      TauLn = TauLn[FtrsKeep]
-      TauLn = TauLn[match(FtrsCommon[[view]],names(TauLn))]
-      TauLn = matrix(TauLn,
-                     nrow = dim(YTrgSS[[view]])[1], 
-                     ncol = dim(YTrgSS[[view]])[2], 
-                     byrow = FALSE)
-      rownames(TauLn) = rownames(YTrgSS[[view]])
-    } else{
-      TauLn = numeric()
-    }
-    return(TauLn)
-  }, likelihoods, Fctrzn, YTrgSS, FtrsCommon)
-  
-  ## PREPROCESS DATA
-  YTrgSS <- sapply(views, function(view, YTrgSS, GeoMeans_Lrn){
-    YTrgSS <- preprocessTransfer(view = view, YTrgSS = YTrgSS[[view]], GeoMeans_Lrn = GeoMeans_Lrn[[view]])
-    return(YTrgSS)
-  }, YTrgSS, GeoMeans_Lrn)
-  
-  ## transpose matrices where necessary - to make them samples x features
-  YTrgSS <- sapply(YTrgSS, t)
-  Tau = sapply(Tau, t)
-  TauLn = sapply(TauLn, t)
-  
-  ## return
-  TL_param = list(
-    "YTrgSS" = YTrgSS,
-    "GeoMeans_Lrn" = GeoMeans_Lrn,
-    "Fctrzn_Lrn_W0" = Fctrzn_Lrn_W0,
-    "Fctrzn_Lrn_W" = Fctrzn_Lrn_W,
-    "Fctrzn_Lrn_WSq" = Fctrzn_Lrn_WSq,
-    "Tau" = Tau,
-    "TauLn" = TauLn
-  )
-  return(TL_param)
-}
-
-## old name: preprocessTransfer
-## MT to remove also
-preprocessTCGAData4TransferLearning <- function(view, YTrgSS_list, GeoMeans_Lrn, smpls){
-  #'
-  #' Prepare TCGA data for the transfert learning (for one given view)
-  #' 
-  #' Counts data are normalized and transformed (mRNA and miRNA)
-  #' DNAme SE object is transformed into dataframe
-  #' SNV data are already well shaped
-  #' Columns data (samples) are then reshaped and sorted according the smpls vector
-  #'
-  #' @param YTrgSS list of data of one target subset
-  #' @param view view name of the current data
-  #' @param GeoMeans_Lrn list of geomeans calculated for learning data
-  #' @param smpls vector of sample names
-  #' @returns YTrgSS data well shaped for a specific view
-  
-  ## preprocess and transform
-  if (is.element(view,c('mRNA', 'miRNA'))){
-    YTrgSS = countsNormalization(expdat = YTrgSS_list[[view]], GeoMeans = GeoMeans_Lrn)
-    YTrgSS = countsTransformation(expdat_count = YTrgSS$counts, TopD = nrow(YTrgSS$counts))
-  } else if (view=='DNAme'){
-    YTrgSS = assay(YTrgSS_list[[view]])
-  }
-  
-  ## order columns
-  colnames(YTrgSS) = substr(colnames(YTrgSS),1,16)
-  YTrgSS = YTrgSS[,match(smpls,colnames(YTrgSS))]
-  
-  ## Return
-  return(YTrgSS)
-}
-
-### MT to remove
-TCGAinitTransferLearningParamaters <- function(YTrgFull, views, brcds_SS, SS, expdat_meta_Lrn, Fctrzn, likelihoods){
-  #'
-  #' Transfer Learning parameters initialization
-  #' 
-  #' 
-  #' @param YTrgFull named list of data
-  #' @param views vector of data names
-  #' 
-  #' 
-  
-  ## Prepare YTrgSS
-  print("Prepare YTrgSS")
-  YTrgSS <- sapply(views, TCGATrgSubsetPreparation, brcds_SS = brcds_SS, SS = SS, YTrgFull = YTrgFull, Fctrzn = Fctrzn)
-  YTrgFtrs <- lapply(YTrgSS, rownames)
-  
-  ## PREPROCESS DATA
-  YTrgSS <- sapply(views, function(view, YTrgSS, GeoMeans_Lrn){
-    YTrgSS <- preprocessTCGAData4TransferLearning(view = view, YTrgSS = YTrgSS[[view]], GeoMeans_Lrn = GeoMeans_Lrn[[view]])
-    return(YTrgSS)
-  }, YTrgSS, GeoMeans_Lrn)
-  
-  TL_param = initTransferLearningParamaters(YTrgSS, views, expdat_meta_Lrn, Fctrzn, likelihoods)
-  
-  return(TL_param)
-}
