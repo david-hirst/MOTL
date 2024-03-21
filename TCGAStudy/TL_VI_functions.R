@@ -681,7 +681,35 @@ E_ZWSq_update <- function(view, E_ZE_W, ZMuSq, E_Z_SqE_W_Sq, E_ZSqE_WSq){
   return(E_ZWSq)
 }
 
-
+VarExplFun <- function(views, YGauss, ZMu_0, Fctrzn_Lrn_W0, ZMu, Fctrzn_Lrn_W){
+  #' 
+  #' Calculate the variance explained by each factor for eah view
+  #' 
+  #' @param views list of view data names
+  #' @param YGauss list of pseudo Y value matrices
+  #' @param ZMu_0 list of ZMu intercept matrices
+  #' @param ZMu list of ZMu matrices
+  #' @param Fctrzn_Lrn_W0 list of factorized learning set weight intercept matrices
+  #' @param Fctrzn_Lrn_W list of factorized learning set weight matrices
+  #' @returns variance explained matrix
+  
+  SS_tmp <- sapply(views, function(view, YGauss, ZMu_0, Fctrzn_Lrn_W0){
+    SS_tmp <- sum((YGauss[[view]] - (matrix(ZMu_0,ncol = 1) %*% t(Fctrzn_Lrn_W0[[view]])))^2, na.rm=TRUE)
+    return(SS_tmp)
+  }, YGauss, ZMu_0, Fctrzn_Lrn_W0, simplify = FALSE)
+  
+  VarExpl = sapply(views, function(view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
+    factorNames = colnames(ZMu)
+    var_expl_tmp = sapply(factorNames, function(factorName, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
+      RSS_tmp = sum((YGauss[[view]] - (cbind(ZMu_0,ZMu[,factorName]) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]][,factorName]))))^2, na.rm=TRUE)
+      var_expl_tmp = 1-(RSS_tmp/SS_tmp[[view]])
+      return(var_expl_tmp)
+    }, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
+    return(var_expl_tmp)
+  }, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
+  
+  return(VarExpl)
+}
 
 transferLearning_function <- function(TL_param, MaxIterations, MinIterations, minFactors, 
                                       StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH,
@@ -703,7 +731,7 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   #' @param CenterTrg Center Trg with own means or use estimated intercepts
   #' @param PoisRateCstnt amount to add to the poison rate function to avoid errors
   #' @param outputDir output directory name
-  #' @returns list of two parameters: PoisRateCstnt and final explained variance matrix
+  #' @returns list of transfer learning data
   
   ss_fit_start_time = Sys.time()
   
@@ -734,34 +762,24 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
       
       print("Drop factors")
       
-      SS_tmp <- sapply(views, function(view, YGauss, ZMu_0, Fctrzn_Lrn_W0){
-        SS_tmp <- sum((YGauss[[view]] - (matrix(ZMu_0,ncol = 1) %*% t(Fctrzn_Lrn_W0[[view]])))^2, na.rm=TRUE)
-        return(SS_tmp)
-      }, YGauss, ZMu_0, Fctrzn_Lrn_W0, simplify = FALSE)
+      VarExpl = VarExplFun(views = views, YGauss = YGauss, ZMu_0 = ZMu_0, Fctrzn_Lrn_W0 = Fctrzn_Lrn_W0, ZMu = ZMu, Fctrzn_Lrn_W = Fctrzn_Lrn_W)
       
-      #SS_tmp = lapply(split(SS_tmp, names(SS_tmp)), unname)
+      # SS_tmp <- sapply(views, function(view, YGauss, ZMu_0, Fctrzn_Lrn_W0){
+      #   SS_tmp <- sum((YGauss[[view]] - (matrix(ZMu_0,ncol = 1) %*% t(Fctrzn_Lrn_W0[[view]])))^2, na.rm=TRUE)
+      #   return(SS_tmp)
+      # }, YGauss, ZMu_0, Fctrzn_Lrn_W0, simplify = FALSE)
       
-      VarExpl = sapply(views, function(view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
-        factorNames = colnames(ZMu)
-        var_expl_tmp = sapply(factorNames, function(factorName, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
-          RSS_tmp = sum((YGauss[[view]] - (cbind(ZMu_0,ZMu[,factorName]) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]][,factorName]))))^2, na.rm=TRUE)
-          var_expl_tmp = 1-(RSS_tmp/SS_tmp[[view]])
-          return(var_expl_tmp)
-          }, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
-        return(var_expl_tmp)
-        }, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
-      var_expl_max <- apply(VarExpl,1,max)
-      print(head(VarExpl))
-      
-      # var_expl_max <- numeric()
-      # for (k in 1:dim(ZMu)[2]){
-      #   var_expl_tmp <- unlist(lapply(views, function(view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
-      #     RSS_tmp = sum((YGauss[[view]] - (cbind(ZMu_0,ZMu[,k]) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]][,k]))))^2, na.rm=TRUE)
+      # VarExpl = sapply(views, function(view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
+      #   factorNames = colnames(ZMu)
+      #   var_expl_tmp = sapply(factorNames, function(factorName, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp){
+      #     RSS_tmp = sum((YGauss[[view]] - (cbind(ZMu_0,ZMu[,factorName]) %*% t(cbind(Fctrzn_Lrn_W0[[view]],Fctrzn_Lrn_W[[view]][,factorName]))))^2, na.rm=TRUE)
       #     var_expl_tmp = 1-(RSS_tmp/SS_tmp[[view]])
       #     return(var_expl_tmp)
-      #   }, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp))
-      #   var_expl_max <- c(var_expl_max, max(var_expl_tmp))
-      # }
+      #     }, view, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
+      #   return(var_expl_tmp)
+      #   }, YGauss, ZMu_0, ZMu, Fctrzn_Lrn_W0, Fctrzn_Lrn_W, SS_tmp)
+      
+      var_expl_max <- apply(VarExpl,1,max)
       
       ## drop factor with lowest max variance explained if below the threshold
       if (min(var_expl_max)<DropFactorTH){
@@ -881,9 +899,8 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
     
   }
   
-  # add names where necessary
-  # rownames(ZMu) = smpls
-  # colnames(ZMu) = colnames(Fctrzn_Lrn_W[[1]])
+  ## Variance explained calculation with final factors
+  VarExpl = VarExplFun(views = views, YGauss = YGauss, ZMu_0 = ZMu_0, Fctrzn_Lrn_W0 = Fctrzn_Lrn_W0, ZMu = ZMu, Fctrzn_Lrn_W = Fctrzn_Lrn_W)
   
   # export the data for further analysis
   ss_end_time = Sys.time()
@@ -895,6 +912,7 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
     'Fctrzn_Lrn_W0' = Fctrzn_Lrn_W0,
     'Fctrzn_Lrn_W' = Fctrzn_Lrn_W,
     'ELBO' = ELBO,
+    'VarExpl' = VarExpl,
     'ss_start_time' = ss_start_time,
     'ss_fit_start_time' = ss_fit_start_time,
     'ss_end_time' = ss_end_time
@@ -907,10 +925,8 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   
   invisible(gc())
   
-  TL_output <- list(
-    "PoisRateCstnt" = PoisRateCstnt,
-    "VarExpl" = VarExpl
-  )
+  return(TL_data)
+  
 }
 
 

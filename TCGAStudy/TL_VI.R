@@ -170,8 +170,8 @@ for(ss in 1:brcds_SS$SS_count){
     'FreqELBO' = FreqELBO,
     'ConvergenceTH' = ConvergenceTH,
     'ConvergenceIts' = ConvergenceIts,
-    'PoisRateCstnt' = TL_output$PoisRateCstnt,
-    'LrnSimple' = TRUE,
+    # 'PoisRateCstnt' = 0.0001,
+    # 'LrnSimple' = TRUE,
     'script_start_time' = script_start_time,
     'loop_start_time' = loop_start_time,
     'script_end_time' = script_end_time
