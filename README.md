@@ -8,8 +8,8 @@ The repository is organised into three folders:
 
 [SimulationStudy](https://github.com/david-hirst/MOTL/tree/main/SimulationStudy): This folder contains scripts for carrying out the simulation study. More details in the [00_SimStudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/00_SimStudy_ReadMe.md) file
 
-[TCGAStudy](https://github.com/david-hirst/MOTL/tree/main/TCGAStudy): This folder contains scripts for carrying out the TCGA study, as well as functions that can be downloaded to apply MOTL to a target dataset of interest.. More details in the [00_TCGAstudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/00_TCGAstudy_ReadMe.md) file.
+[TCGAStudy](https://github.com/david-hirst/MOTL/tree/main/TCGAStudy): This folder contains scripts for carrying out the TCGA study, as well as functions that can be downloaded to apply MOTL to a target dataset of interest. More details in the [00_TCGAstudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/00_TCGAstudy_ReadMe.md) file.
 
-[GlioblastomaUseCase](https://github.com/david-hirst/MOTL/tree/main/GlioblastomaUseCase): This folder contains scripts for the use case illustration of MOTL with glioblastoma data.
+[GlioblastomaUseCase](https://github.com/david-hirst/MOTL/tree/main/GlioblastomaUseCase): This folder contains scripts for the use case illustration of MOTL with glioblastoma data. MOre details in the [00_GlioblastomaUseCase_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/00_GlioblastomaUseCase_ReadMe.md) file.
 
 ## How to use MOTL on your own data 
