@@ -13,3 +13,122 @@ The repository is organised into three folders:
 [GlioblastomaUseCase](https://github.com/david-hirst/MOTL/tree/main/GlioblastomaUseCase): This folder contains scripts for the use case illustration of MOTL with glioblastoma data. MOre details in the [00_GlioblastomaUseCase_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/00_GlioblastomaUseCase_ReadMe.md) file.
 
 ## How to use MOTL on your own data 
+
+MOTL is run using R. 
+
+### Downloads
+You will firstly need to download the following files of functions from this github site:
+[TCGA_preprocessedData.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_preprocessedData.R)
+[TL_VI_functions.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TL_VI_functions.R)
+
+Next download the learning dataset factorization files from [this zenodo repository](https://zenodo.org/records/10848217) and unzip.
+
+### load libraries and functions
+```
+library(SummarizedExperiment)
+library(DESeq2)
+library(sesame)
+library(dplyr)
+library(MOFA2)
+library(rhdf5)
+
+source('TCGA_preprocessedData_functions.R')
+source('TL_VI_functions.R')
+```
+### Pre-processing of learning dataset factorization
+Location of learning data downloaded from zenodo
+```
+LrnDir = 'LrnData'
+LrnFctrnDir = file.path(LrnDir,'Lrn_5000D_Fctrzn_100K_001TH')
+```
+Specify whether to center the target dataste during processing or to leave uncentered and use enstmated learning dataset intercepts
+```
+CenterTrg = FALSE
+```
+Import the learning dataset metadata, factorization, and initialise values
+```
+expdat_meta_Lrn = readRDS(file.path(LrnDir,"expdat_meta.rds"))
+InputModel = file.path(LrnFctrnDir,"Model.hdf5")
+Fctrzn = load_model(file = InputModel)
+
+viewsLrn = Fctrzn@data_options$views
+likelihoodsLrn = Fctrzn@model_options$likelihoods
+MLrn = Fctrzn@dimensions$M
+
+Fctrzn@expectations[["Tau"]] = Tau_init(viewsLrn, Fctrzn, InputModel)
+Fctrzn@expectations[["TauLn"]] = sapply(viewsLrn, TauLn_calculation, likelihoodsLrn, Fctrzn, LrnFctrnDir)
+Fctrzn@expectations[["WSq"]] = sapply(viewsLrn, WSq_calculation, Fctrzn, LrnFctrnDir)
+Fctrzn@expectations[["W0"]] = sapply(viewsLrn, W0_calculation, CenterTrg, Fctrzn, LrnFctrnDir)
+```
+### Pre-processing of target dataset factorization
+Start with some or all of the following omics matrix, all with features in rows and samples in columns. The columns should be in the same order for each omics.
+
+expdat_mRNA - a matrix of mRNA raw counts, genes in rows, samples in columns. row names should be ensemble ids with no version
+expdat_miRNA - a matrix of miRNA raw counts, miRNAs in rows, samples in columns. row names should be 
+expdat_DNAme - a matrix of DNA methylation M-values, cpgs in rows, samples in columns. row names should be cpg probe ids from either the 450 or epic illumina array
+expdat_SNV - a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. row names should be hugo ids
+
+In the case of expdat_mRNA, a version suffix will need to be added to be consisant with the naming in the TCGA learning data factorization.
+```
+expdat_mRNA = mRNA_addVersion(expdat = expdat_mRNA, Lrndat = Fctrzn@expectations$W$mRNA)
+```
+
+Create a list of the matrices, using the following naming convention
+```
+YTrg_list = list(
+  mRNA = expdat_mRNA,
+  miRNA = expdat_miRNA,
+  DNAme = expdat_DNAme,
+  SNV = expdat_SNV
+)
+```
+Initialise vlaues for transfer learning
+```
+smpls = colnames(YTrg_list[[1]])
+viewsTrg = names(YTrg_list)
+views = viewsLrn[is.element(viewsLrn,viewsTrg)]
+likelihoods = likelihoodsLrn[views]
+
+YTrg_list = TargetDataPreparation(views = views, YTrg_list = YTrg_list, 
+                                  Fctrzn = Fctrzn, smpls = smpls, expdat_meta_Lrn = expdat_meta_Lrn,
+                                  normalization = 'Lrn', transformation = TRUE)
+
+TL_param = initTransferLearningParamaters(YTrg = YTrg_list, views = views, 
+                                          expdat_meta_Lrn = expdat_meta_Lrn, 
+                                          Fctrzn = Fctrzn, likelihoods = likelihoods
+                                          )
+```
+
+### Transfer learning factorization with MOTL
+
+Specify output folder and paramaters for MOTL
+```
+TL_OutDir = MOTL_Fctrzn
+if(!dir.exists(TL_OutDir)){
+  dir.create(TL_OutDir, showWarnings = FALSE, recursive = TRUE)
+}
+
+minFactors = 6 ## floor when dropping factors
+StartDropFactor = 1 # after which iteration to start dropping factors
+FreqDropFactor = 1 # how often to drop factors
+StartELBO = 1 # which iteration to start checking ELBO on, excl initiation iteration
+FreqELBO = 5 # how often to assess the ELBO
+DropFactorTH = 0.01 # factor with lowest max variance, that is less than this, is dropped
+MaxIterations = 10000
+MinIterations = 2 # 
+ConvergenceIts = 2 # numbe rof consectutive checks in a row for which the change in elbo is below the threshold
+ConvergenceTH = 0.0005 # change in elbo threshold
+```
+run MOTL
+```
+TL_data = transferLearning_function(TL_param = TL_param, MaxIterations = MaxIterations, MinIterations =  MinIterations, 
+                                    minFactors = minFactors, StartDropFactor = StartDropFactor, FreqDropFactor = FreqDropFactor, 
+                                    StartELBO = StartELBO, FreqELBO = FreqELBO, DropFactorTH = DropFactorTH, 
+                                    ConvergenceIts = ConvergenceIts, ConvergenceTH = ConvergenceTH, 
+                                    CenterTrg = CenterTrg, outputDir = TL_OutDir)
+```
+
+
+
+
+
