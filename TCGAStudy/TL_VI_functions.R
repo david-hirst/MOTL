@@ -103,7 +103,29 @@ TCGATargetDataPreparation <- function(views, YTrgFull, brcds_SS, SS, Fctrzn, smp
 
 ## ----------------------------------------- INIT PARAMETERS ----
 
-## TRAINING DATA
+## Non-TCGA Target DATA
+
+mRNA_addVersion <- function(expdat, Lrndat){
+  #'
+  #' get ensembl mRNA versions from learning dataset
+  #' and attach to the correspnding mRNA ensembl id in the target dataset
+  #'
+  #' @param expdat the mRNA matrix from the target dataset with genes in rows
+  #' @param Lrndat the mRNA W matrix from the learning dataset factorization with genes in rows
+  #' @returns the target mRNA matrix with versions attached
+  
+  tmp = as.data.frame(do.call(rbind,strsplit(rownames(Lrndat),"[.]")))
+  # match to stripped ids from target set
+  tmp = data.frame(V1 = rownames(expdat)) %>%
+    dplyr::left_join(tmp, by = c('V1')) %>%
+    as.data.frame()
+  # rename target dataset features
+  rownames(expdat) = paste0(tmp$V1,'.',tmp$V2)
+ 
+  # return tidied up matrix
+  return(expdat)
+  
+}
 
 TargetDataPrefiltering <- function(view, YTrg_list, Fctrzn, smpls){
   #'
