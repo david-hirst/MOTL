@@ -132,7 +132,11 @@ TL_data = transferLearning_function(TL_param = TL_param, MaxIterations = MaxIter
                                     ConvergenceIts = ConvergenceIts, ConvergenceTH = ConvergenceTH, 
                                     CenterTrg = CenterTrg, outputDir = TL_OutDir)
 ```
-
+Extract the Z and W matrices from the MOTL factrization. Z is the inferred score matrix for the target dataset: rows and samples, and columns are factors. Each W has features in the columns and factors in the rows. Factor names correspond to the name form the learning dataset factorization
+```
+ZMu = TL_data$ZMu
+W_mRNA = TL_data$Fctrzn_Lrn_W$mRNA
+```
 
 
 
