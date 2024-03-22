@@ -108,7 +108,7 @@ TL_param = initTransferLearningParamaters(YTrg = YTrg_list, views = views,
 
 Specify output folder and paramaters for MOTL
 ```
-TL_OutDir = MOTL_Fctrzn
+TL_OutDir = 'MOTL_Fctrzn'
 if(!dir.exists(TL_OutDir)){
   dir.create(TL_OutDir, showWarnings = FALSE, recursive = TRUE)
 }
