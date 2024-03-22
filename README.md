@@ -124,7 +124,7 @@ MinIterations = 2 #
 ConvergenceIts = 2 # numbe rof consectutive checks in a row for which the change in elbo is below the threshold
 ConvergenceTH = 0.0005 # change in elbo threshold
 ```
-run MOTL
+run MOTL to infer and save the factorization as an rds file
 ```
 TL_data = transferLearning_function(TL_param = TL_param, MaxIterations = MaxIterations, MinIterations =  MinIterations, 
                                     minFactors = minFactors, StartDropFactor = StartDropFactor, FreqDropFactor = FreqDropFactor, 
