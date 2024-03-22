@@ -66,22 +66,22 @@ Record the time that the pre-processing starts
 ss_start_time = Sys.time()
 ```
 
-Start with some or all of the following omics matrix, all with features in rows and samples in columns. The columns should be in the same order for each omics, the order of the features is not important. However the type of id used to name the features should be consistant with the TCGA learning dataset, as outline below.
+Start with some or all of the following omics matrix, all with features in rows and samples in columns. The names of these matrices are not important. The set of column names should be the same for each omics, although the order is not important as they will be ordered automatically. The order of the features is not important, however the type of id used to name the features should be consistant with the TCGA learning dataset, as outlined below.
 
-expdat_mRNA: a matrix of mRNA raw counts, genes in rows, samples in columns. Row names should be Ensemble ids WITH NO VERSION SUFFIX.
+__expdat_mRNA__: a matrix of mRNA raw counts, genes in rows, samples in columns. Row names should be Ensemble ids WITH NO VERSION SUFFIX.
 
-expdat_miRNA: a matrix of miRNA raw counts, miRNAs in rows, samples in columns. Row names should be miRBase ids.
+__expdat_miRNA__: a matrix of miRNA raw counts, miRNAs in rows, samples in columns. Row names should be miRBase ids.
 
-expdat_DNAme: a matrix of DNA methylation M-values, cpgs in rows, samples in columns. Row names should be cpg probe ids from either the 450 or epic illumina array.
+__expdat_DNAme__: a matrix of DNA methylation M-values, cpgs in rows, samples in columns. Row names should be cpg probe ids from either the 450 or epic illumina array.
 
-expdat_SNV: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. Row names should be Hugo symbols.
+__expdat_SNV__: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. Row names should be Hugo symbols.
 
 In the case of expdat_mRNA, a version suffix will need to be added to be consisant with the naming in the TCGA learning data factorization.
 ```
 expdat_mRNA = mRNA_addVersion(expdat = expdat_mRNA, Lrndat = Fctrzn@expectations$W$mRNA)
 ```
 
-Create a list of the matrices, using the following naming convention
+Create a list of the matrices, using the following naming convention for each omics.
 ```
 YTrg_list = list(
   mRNA = expdat_mRNA,
