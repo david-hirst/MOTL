@@ -61,6 +61,11 @@ Fctrzn@expectations[["WSq"]] = sapply(viewsLrn, WSq_calculation, Fctrzn, LrnFctr
 Fctrzn@expectations[["W0"]] = sapply(viewsLrn, W0_calculation, CenterTrg, Fctrzn, LrnFctrnDir)
 ```
 ### Pre-processing of target dataset factorization
+Record the time that the pre-processing starts
+```
+ss_start_time = Sys.time()
+```
+
 Start with some or all of the following omics matrix, all with features in rows and samples in columns. The columns should be in the same order for each omics.
 
 expdat_mRNA - a matrix of mRNA raw counts, genes in rows, samples in columns. row names should be ensemble ids with no version
