@@ -66,12 +66,15 @@ Record the time that the pre-processing starts
 ss_start_time = Sys.time()
 ```
 
-Start with some or all of the following omics matrix, all with features in rows and samples in columns. The columns should be in the same order for each omics.
+Start with some or all of the following omics matrix, all with features in rows and samples in columns. The columns should be in the same order for each omics, the order of the features is not important. However the type of id used to name the features should be consistant with the TCGA learning dataset, as outline below.
 
-expdat_mRNA - a matrix of mRNA raw counts, genes in rows, samples in columns. row names should be ensemble ids with no version
-expdat_miRNA - a matrix of miRNA raw counts, miRNAs in rows, samples in columns. row names should be 
-expdat_DNAme - a matrix of DNA methylation M-values, cpgs in rows, samples in columns. row names should be cpg probe ids from either the 450 or epic illumina array
-expdat_SNV - a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. row names should be hugo ids
+expdat_mRNA: a matrix of mRNA raw counts, genes in rows, samples in columns. row names should be ensemble ids with no version
+
+expdat_miRNA: a matrix of miRNA raw counts, miRNAs in rows, samples in columns. row names should be 
+
+expdat_DNAme: a matrix of DNA methylation M-values, cpgs in rows, samples in columns. row names should be cpg probe ids from either the 450 or epic illumina array
+
+expdat_SNV: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. row names should be hugo ids
 
 In the case of expdat_mRNA, a version suffix will need to be added to be consisant with the naming in the TCGA learning data factorization.
 ```
