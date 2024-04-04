@@ -90,7 +90,7 @@ YTrg_list = list(
   SNV = expdat_SNV
 )
 ```
-Initialise vlaues for transfer learning
+Initialise values for transfer learning
 ```
 smpls = colnames(YTrg_list[[1]])
 viewsTrg = names(YTrg_list)
