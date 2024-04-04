@@ -68,13 +68,13 @@ ss_start_time = Sys.time()
 
 Start with some or all of the following omics matrix, all with features in rows and samples in columns. The names of these matrices are not important. The set of column names should be the same for each omics, although the order is not important as they will be ordered automatically. The order of the features is not important, however the type of id used to name the features should be consistant with the TCGA learning dataset, as outlined below.
 
-__expdat_mRNA__: a matrix of mRNA raw counts, genes in rows, samples in columns. Row names should be Ensemble ids without the version suffix.
+**expdat_mRNA**: a matrix of mRNA raw counts, genes in rows, samples in columns. Row names should be Ensemble ids without the version suffix; for example *ENSG00000000005*.
 
-__expdat_miRNA__: a matrix of miRNA raw counts, miRNAs in rows, samples in columns. Row names should be miRBase ids.
+**expdat_miRNA**: a matrix of miRNA raw counts, miRNAs in rows, samples in columns. Row names should be miRNA names as per miRBase (v21); for example *hsa-mir-1-1*.
 
-__expdat_DNAme__: a matrix of DNA methylation M-values, cpgs in rows, samples in columns. Row names should be cpg probe ids from either the 450 or epic illumina array.
+**expdat_DNAme**: a matrix of DNA methylation M-values, cpgs in rows, samples in columns. Row names should be cpg probe ids from either the 450 or epic illumina array; for example *cg09364122*.
 
-__expdat_SNV__: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. Row names should be Hugo symbols.
+**expdat_SNV**: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. Row names should be Hugo symbols; for example *AKAP13*.
 
 In the case of expdat_mRNA, a version suffix will need to be added to be consisant with the naming in the TCGA learning data factorization.
 ```
