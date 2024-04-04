@@ -1,4 +1,4 @@
-# MOTL: multi-omics matrix factorization with tranfer learning
+# MOTL: multi-omics matrix factorization with transfer learning
 
 ## MOTL code repository contents
 
