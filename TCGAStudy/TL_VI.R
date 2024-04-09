@@ -1,27 +1,20 @@
 ## MT - 20240227
 
-## SET WORK DIRECTORY
-# setwd("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOTL/TCGAStudy/TCGA_analysisTests/")
-setwd("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOLTI_TL-VI/MOTL/TCGAStudy/TCGA_analysisTests/")
-
 ## SET FUNCTIONS
-source("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOLTI_TL-VI/MOTL/TCGAStudy/TCGA_preprocessedData_functions.R")
-source("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOLTI_TL-VI/MOTL/TCGAStudy/TL_VI_functions.R")
+source("TCGA_preprocessedData_functions.R")
+source("TL_VI_functions.R")
 
 ## LIBRARIES
 library("MOFA2")
 library("rhdf5")
 library("SummarizedExperiment")
-library(dplyr)
+library("dplyr")
 
 ## DATA PARAMETERS
 Seed = 1234567
 TopD = 5000
 LrnK = 100
-# viewsTrg = c('mRNA','miRNA','DNAme', 'SNV')
 viewsTrg = c('mRNA','miRNA','DNAme')
-# Prjcts = c("TCGA-LAML", "TCGA-PAAD", "TCGA-SKCM")
-# Prjcts = "TCGA-PAAD"
 Prjcts = c("TCGA-LAML", "TCGA-SKCM")
 SS_size = 5
 YTrgFull <- list()
@@ -35,14 +28,6 @@ LrnFctrnDir = file.path(LrnDir,paste0('Fctrzn_',LrnK,'K'))
 TrgPrjcts <- paste0(substr(Prjcts,6,nchar(Prjcts)), collapse='_')
 TrgBrcd <- paste0('Trg_', TrgPrjcts, "_Full_",TopD,'D/expdat_meta.rds')
 TrgDirSS <- paste0('Trg_', TrgPrjcts, '_SS',SS_size,'_',TopD,'D')
-# TrgDir <- paste0('Trg_', TrgPrjcts, '_',TopD,'D')
-
-DataDir = "../TCGA_database/DownloadedData_unfltrd/"
-LrnDir <- "../TCGA_database/MOFA_TL/Lrn_5000D/"
-LrnFctrnDir <- "../TCGA_database/MOFA_TL/Lrn_5000D/Fctrzn_100K/"
-TrgBrcd <- "Trg_PAAD_5000D/expdat_meta.rds"
-TrgDirSS <- "Trg_PAAD_SS5_5000D/"
-
 
 ## TL PARAMETERS
 ## LrnSimple = TRUE ## if TRUE then E[W^2] and E[LnTau] are calculated form E[W] and E[Tau] otherwise imported

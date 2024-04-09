@@ -1,13 +1,5 @@
 ## MT - 20231110
 
-## FUNCTIONS TO PREPROCESSED TCGA DATA
-
-.libPaths(c("/home/morgane/Documents/00_Tools/miniconda3/envs/tcga/lib/R/library", "/home/morgane/R/x86_64-pc-linux-gnu-library/4.3"))
-
-## SET ENVIRONMENT
-# setwd("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOLTI_TL-VI/MOTL/TCGAStudy/TCGA_analysisTests/")
-setwd("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOTL/TCGAStudy/TCGA_analysisTests/")
-
 ## LIBRARIES
 library(TCGAbiolinks)
 library(SummarizedExperiment)
@@ -16,8 +8,7 @@ library(sesame)
 library(dplyr)
 
 ## FUNCTIONS
-# source("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOLTI_TL-VI/MOTL/TCGAStudy/TCGA_preprocessedData_functions.R")
-source("/home/morgane/Documents/01_Projects/03_OtherProjects/05_David_Thesis/MOTL/TCGAStudy/TCGA_preprocessedData_functions.R")
+source("TCGA_preprocessedData_functions.R")
 
 ## ------------------------------------------------------------------------------
 ## ------------------------------------------------------------ LEARNING SET ----
@@ -140,11 +131,6 @@ smpls = sample(smpls, length(smpls), replace = FALSE)
 print(Sys.time())
 print("mRNA")
 
-## Read experimental data files
-# expdat_mRNA_list = sapply(Prjcts, mRNAPreprocessing, brcds_mRNA = brcds_mRNA, InputDir = InputDir)
-## Merge experimental data into only one SE object
-# expdat_mRNA <- mergeExperimentalData(expdat_list = expdat_mRNA_list)
-
 ## Read and merge data files
 expdat_mRNA_merged <- mRNAdataPreparation(Prjcts = Prjcts, brcds_mRNA = brcds_mRNA, InputDir = InputDir)
 
@@ -165,22 +151,10 @@ expdat_mRNA_sorted <- orderAndSaveData(expdat = expdat_mRNA_log, smpls = smpls, 
 rm(expdat_mRNA_merged, expdat_mRNA_fltr, expdat_mRNA_norm, expdat_mRNA_log)
 gc()
 
-## PCA to get estimates of necessary factor count
-# ElbowK_mRNA = PCAtools::pca(mat = expdat_mRNA_sorted[rowSums(is.na(expdat_mRNA_sorted))==0,], scale = TRUE)
-
-## get elbow point and % of variance explained
-# PCVarPrcnt_mRNA = ElbowK_mRNA$variance/sum(ElbowK_mRNA$variance)
-# ElbowK_mRNA = PCAtools::findElbowPoint(ElbowK_mRNA$variance)
-
 ## ---------- miRNA data preprocessing 
 
 print(Sys.time())
 print("miRNA")
-
-## Read experimental data files
-# expdat_miRNA_list = sapply(Prjcts, miRNAPreprocessing, brcds_miRNA = brcds_miRNA, InputDir = InputDir)
-## Merge experimental data into only one SE object
-# expdat_miRNA_merged <- mergeSEs(expdat_miRNA_list, do.scale = FALSE, commonOnly = TRUE, addDatasetPrefix = FALSE)
 
 ## Read and merge data files
 expdat_miRNA_merged <- miRNAdataPreparation(Prjcts = Prjcts, brcds_miRNA = brcds_miRNA, InputDir = InputDir)
@@ -202,22 +176,10 @@ expdat_miRNA_sorted <- orderAndSaveData(expdat = expdat_miRNA_log, smpls = smpls
 rm(expdat_miRNA_merged, expdat_miRNA_fltr, expdat_miRNA_norm, expdat_miRNA_log)
 gc()
 
-## PCA to get estimates of necessary factor count
-# ElbowK_miRNA = PCAtools::pca(mat = expdat_miRNA_sorted[rowSums(is.na(expdat_miRNA_sorted))==0,], scale = TRUE)
-
-## % of variance explained and elbow point
-# PCVarPrcnt_miRNA = ElbowK_miRNA$variance/sum(ElbowK_miRNA$variance)
-# ElbowK_miRNA = PCAtools::findElbowPoint(ElbowK_miRNA$variance)
-
 ## ---------- DNAme data preprocessing
 
 print(Sys.time())
 print("DNAme")
-
-## Read experimental data files
-# expdat_DNAme_list <- sapply(Prjcts[c(1:10)], DNAmePreprocessing, brcds_DNAme = brcds_DNAme, InputDir = InputDir)
-## Merge experimental data into only one SE object
-# expdat_DNAme_merged <- mergeExperimentalData(expdat_list = expdat_DNAme_list)
 
 ## Read and merge data files
 expdat_DNAme_merged <- DNAmedataPreparation(Prjcts = Prjcts, brcds_DNAme = brcds_DNAme, InputDir = InputDir)
@@ -232,22 +194,10 @@ expdat_DNAme_sorted <- orderAndSaveData(expdat = expdat_DNAme_fltr, smpls = smpl
 rm(expdat_DNAme_merged, expdat_DNAme_fltr)
 gc()
 
-## PCA to get estimates of necessary factor count
-# ElbowK_DNAme = PCAtools::pca(mat = expdat_DNAme_sorted[rowSums(is.na(expdat_DNAme_sorted))==0,], scale = TRUE)
-
-## % of variance explained and elbow point
-# PCVarPrcnt_DNAme = ElbowK_DNAme$variance/sum(ElbowK_DNAme$variance)
-# ElbowK_DNAme = PCAtools::findElbowPoint(ElbowK_DNAme$variance)
-
 ## ---------- SNV data preprocessing
 
 print(Sys.time())
 print("SNV")
-
-## Read experimental data files
-# expdat_SNV_list <- lapply(Prjcts, SNVPreprocessing, brcds_SNV = brcds_SNV, InputDir = InputDir)
-## Merge experimental data into only one SE object
-# expdat_SNV_merged <- do.call(rbind, expdat_SNV_list)
 
 ## Read and merge data files
 expdat_SNV_merged <- SNVdataPreparation(Prjcts = Prjcts, brcds_SNV = brcds_SNV, InputDir = InputDir)
@@ -262,13 +212,6 @@ expdat_SNV_sorted <- orderAndSaveData(expdat = expdat_SNV_fltr, smpls = smpls, O
 rm(expdat_SNV_merged, expdat_SNV_fltr)
 gc()
 
-## PCA to get estimates of necessary factor count
-# ElbowK_SNV = PCAtools::pca(mat = expdat_SNV_sorted[rowSums(is.na(expdat_SNV_sorted))==0,], scale = TRUE)
-
-## % of variance explained and elbow point
-# PCVarPrcnt_SNV = ElbowK_SNV$variance/sum(ElbowK_SNV$variance)
-# ElbowK_SNV = PCAtools::findElbowPoint(ElbowK_SNV$variance)
-
 ## -------------------------------------
 
 ## ------------------ SAVE METADATA ----
@@ -276,8 +219,6 @@ gc()
 ## SAVE METADATA
 expdat_list <- list("mRNA" = expdat_mRNA_sorted, "miRNA" = expdat_miRNA_sorted, "DNAme" = expdat_DNAme_sorted, "SNV" = expdat_SNV_sorted)
 brcds_list <- list("brcds_mRNA" = brcds_mRNA, "brcds_miRNA" = brcds_miRNA, "brcds_DNAme" = brcds_DNAme, "brcds_SNV" = brcds_SNV)
-# PCA_list <- list("PCVarPrcnt_mRNA" = PCVarPrcnt_mRNA, "PCVarPrcnt_miRNA" = PCVarPrcnt_miRNA, "PCVarPrcnt_DNAme" = PCVarPrcnt_DNAme, "PCVarPrcnt_SNV" = PCVarPrcnt_SNV)
-# Elbow_list <- list("ElbowK_mRNA" = ElbowK_mRNA, "ElbowK_miRNA" = ElbowK_miRNA, "ElbowK_DNAme" = ElbowK_DNAme, "ElbowK_SNV" = ElbowK_SNV)
 GeoMeans_list <- list("GeoMeans_mRNA" = expdat_mRNA_geoMeans, "GeoMeans_miRNA" = expdat_miRNA_geoMeans)
 
 saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_list, brcds_list = brcds_list, Prjcts = Prjcts, GeoMeans_list = GeoMeans_list)
@@ -375,9 +316,6 @@ smpls = sample(smpls, length(smpls), replace = FALSE)
 print(Sys.time())
 print("mRNA")
 
-## Read experimental data files
-# expdat_mRNA = mRNAPreprocessing(Prjct = Prjct, brcds_mRNA = brcds_mRNA, InputDir = InputDir)
-
 ## Read and merge data files
 expdat_mRNA_merged <- mRNAdataPreparation(Prjcts = Prjct, brcds_mRNA = brcds_mRNA, InputDir = InputDir)
 
@@ -409,9 +347,6 @@ gc()
 print(Sys.time())
 print("miRNA")
 
-## Read experimental data files
-# expdat_miRNA = miRNAPreprocessing(Prjct = Prjct, brcds_miRNA = brcds_miRNA, InputDir = InputDir)
-
 ## Read and merge data files
 expdat_miRNA_merged <- miRNAdataPreparation(Prjcts = Prjct, brcds_miRNA = brcds_miRNA, InputDir = InputDir)
 
@@ -442,9 +377,6 @@ gc()
 
 print(Sys.time())
 print("DNAme")
-
-## Read experimental data files
-# expdat_DNAme <- DNAmePreprocessing(Prjct = Prjct, brcds_DNAme = brcds_DNAme, InputDir = InputDir)
 
 ## Read and merge data files
 expdat_DNAme_merged <- DNAmedataPreparation(Prjcts = Prjct, brcds_DNAme = brcds_DNAme, InputDir = InputDir)
@@ -535,7 +467,6 @@ saveRDS(brcds_SS, file.path(OutDir_SS,'brcds_SS.rds'))
 brcds_SS = readRDS(file.path(OutDir_SS,'brcds_SS.rds'))
 
 InputDir = file.path("DownloadedData_unfltrd")
-# OutDir_SS = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),'_SS',SS_size,'_',TopD,'D')
 
 tmp <- lapply(1:brcds_SS$SS_count, createSubsetOneProject, brcds_SS = brcds_SS, OutDir = OutDir_SS, GeoMeans = GeoMeans, InputDir = InputDir)
 
@@ -658,12 +589,6 @@ smpls = sample(smpls, length(smpls), replace = FALSE)
 print(Sys.time())
 print("mRNA")
 
-## Read experimental data files
-# expdat_mRNA_list = sapply(Prjcts, mRNAPreprocessing, brcds_mRNA = brcds_mRNA, InputDir = InputDir)
-
-## Merge experimental data into only one SE object
-# expdat_mRNA_merged <- mergeExperimentalData(expdat_list = expdat_mRNA_list)
-
 ## Read and merge files
 expdat_mRNA_merged <- mRNAdataPreparation(Prjcts = Prjcts, brcds_mRNA = brcds_mRNA, InputDir = InputDir)
 
@@ -695,11 +620,6 @@ gc()
 print(Sys.time())
 print("miRNA")
 
-## Read experimental data files
-# expdat_miRNA_list = sapply(Prjcts, miRNAPreprocessing, brcds_miRNA = brcds_miRNA, InputDir = InputDir)
-## Merge experimental data into only one SE object
-# expdat_miRNA_merged <- mergeSEs(expdat_miRNA_list, do.scale = FALSE, commonOnly = TRUE, addDatasetPrefix = FALSE)
-
 ## Read and merge files
 expdat_miRNA_merged <- miRNAdataPreparation(Prjcts = Prjcts, brcds_miRNA = brcds_miRNA, InputDir = InputDir)
 
@@ -730,11 +650,6 @@ gc()
 
 print(Sys.time())
 print("DNAme")
-
-## Read experimental data files
-# expdat_DNAme_list <- sapply(Prjcts, DNAmePreprocessing, brcds_DNAme = brcds_DNAme, InputDir = InputDir)
-## Merge experimental data into only one SE object
-# expdat_DNAme_merged <- mergeExperimentalData(expdat_list = expdat_DNAme_list)
 
 ## Read and merge files
 expdat_DNAme_merged <- DNAmedataPreparation(Prjcts = Prjcts, brcds_DNAme = brcds_DNAme, InputDir = InputDir)

@@ -1,5 +1,128 @@
 ## FUNCTIONS
 
+## ---------------------- DOWNLOAD TCGA DATA FROM GDC PORTAL ----
+
+downloadTCGAProjectData <- function(Prjct, SaveDirectory){
+  #' Download four omics data from one TCGA project 
+  #'
+  #' For a TCGA project name, this function:
+  #' 1. Create queries for mRNA, miRNA, DNAme and SNV data
+  #' 2. Download the corresponding raw data files
+  #' 3. Read these raw data files
+  #' 4. Concatenate files and save them into .rds files
+  #' 5. Remove the raw data files
+  #' 
+  #' @param Prjct TCGA project name
+  #' @param SaveDirectory Directory name to save omics data files
+  
+  ## 
+  print(paste("Download data of", Prjct))
+  
+  ## Set parameters
+  fpc = 20 # files per chunk setting
+  
+  ## set up download queries
+  query_mRNA = GDCquery(
+    project = Prjct, 
+    data.category = "Transcriptome Profiling", 
+    data.type = "Gene Expression Quantification"
+  )
+  
+  query_miRNA = GDCquery(
+    project = Prjct,  
+    data.category = "Transcriptome Profiling", 
+    data.type = "miRNA Expression Quantification"
+  )
+  
+  query_DNAme = GDCquery(
+    project = Prjct,
+    data.category = "DNA Methylation", 
+    data.type = "Methylation Beta Value",
+    platform = "Illumina Human Methylation 450"
+  )
+  
+  query_SNV = GDCquery(
+    project = Prjct, 
+    data.category = "Simple Nucleotide Variation", 
+    access = "open", 
+    data.type = "Masked Somatic Mutation"
+  )
+  
+  ## result summaries of the queries
+  query_mRNA_res = getResults(query_mRNA)
+  query_miRNA_res = getResults(query_miRNA)
+  query_DNAme_res = getResults(query_DNAme)
+  query_SNV_res = getResults(query_SNV)
+  
+  ## files counts for mRNA and DNAme
+  files_mRNA = length(query_mRNA_res$file_name)
+  files_miRNA = length(query_miRNA_res$file_name)
+  files_DNAme = length(query_DNAme_res$file_name)
+  files_SNV = length(query_SNV_res$file_name)
+  
+  ## files per chunk check - can't have any chunks of just 1 file
+  fpc_mRNA = ((files_mRNA - floor(files_mRNA/fpc)*fpc)==1)+0
+  fpc_miRNA = ((files_miRNA - floor(files_miRNA/fpc)*fpc)==1)+0
+  fpc_DNAme = ((files_DNAme - floor(files_DNAme/fpc)*fpc)==1)+0
+  fpc_SNV = ((files_SNV - floor(files_SNV/fpc)*fpc)==1)+0
+  
+  ## download the files
+  GDCdownload(query_mRNA, files.per.chunk = fpc+fpc_mRNA)
+  GDCdownload(query_miRNA, files.per.chunk = fpc+fpc_miRNA)
+  GDCdownload(query_DNAme, files.per.chunk = fpc+fpc_DNAme)
+  GDCdownload(query_SNV, files.per.chunk = fpc+fpc_SNV)
+  
+  ## load the files into R and aggregate for each omics
+  expdat_mRNA = GDCprepare(query = query_mRNA)
+  expdat_miRNA = GDCprepare(query = query_miRNA)
+  expdat_DNAme = GDCprepare(query = query_DNAme)
+  expdat_SNV = GDCprepare(query = query_SNV)
+  
+  ## save these as rds files
+  saveRDS(expdat_mRNA, file.path(SaveDirectory,paste0(Prjct,"_mRNA.rds")))
+  saveRDS(expdat_miRNA, file.path(SaveDirectory,paste0(Prjct,"_miRNA.rds")))
+  saveRDS(expdat_DNAme, file.path(SaveDirectory,paste0(Prjct,"_DNAme.rds")))
+  saveRDS(expdat_SNV, file.path(SaveDirectory,paste0(Prjct,"_SNV.rds")))
+  
+  ## delete the downloaded raw data files
+  unlink(file.path("GDCdata",Prjct),recursive=TRUE)
+}
+
+downloadAllTCGAProjectData <- function(SaveDirectory){
+  #' Download four omics data from all TCGA projects
+  #'
+  #' @param SaveDirectory Directory name to save data files
+  
+  ## get the vector of TCGA projects
+  ProjectsAll = TCGAbiolinks:::getGDCprojects()$project_id
+  ProjectsTCGA = ProjectsAll[substr(ProjectsAll,1,5)=="TCGA-"]
+  
+  ## create a directory to save the final files
+  if(!dir.exists(SaveDirectory)){
+    dir.create(SaveDirectory, showWarnings = FALSE, recursive = TRUE)
+  }
+  
+  ## MT: add condition
+  ## check which projects have files
+  SavedFiles = list.files(SaveDirectory)
+  if(length(SavedFiles) != 0){
+    SavedFiles = SavedFiles[substr(SavedFiles,1,5)=="TCGA-"]
+    SavedFiles = strsplit(SavedFiles,"_")
+    SavedFiles = as.data.frame(do.call("rbind",SavedFiles))
+    ## only get files for projects that haven't been downloaded yet
+    SavedFiles = aggregate(V2~V1,FUN=length,data=SavedFiles)
+    SavedFiles = SavedFiles$V1[SavedFiles$V2==4]
+    ProjectsTCGA = ProjectsTCGA[!is.element(ProjectsTCGA,SavedFiles)]
+  }
+  
+  ## MT: change loop with apply (better, faster) + create function downloadTCGAProjectData(Prjct, SaveDirectory)
+  lapply(X = ProjectsTCGA, FUN = function(Prjct, SaveDirectory){
+    downloadTCGAProjectData(Prjct = Prjct, SaveDirectory = SaveDirectory)
+  }, SaveDirectory)
+}
+## --------------------------------------------------------------
+
+
 ## --------------------------------------------------- OTHERS ----
 
 selectProjects <- function(InputDir, PrjctExcl){
@@ -442,103 +565,6 @@ SNVdataPreparation <- function(Prjcts, brcds_SNV, InputDir){
   return(exdat_SNV_merged)
 }
 
-## MT - TO REMOVE
-mergeExperimentalData <- function(expdat_list){
-  #' Merge SE object of several TCGA projects into one SE object.
-  #' 
-  #' SE: SummarizedExperiment
-  #' Create a row_range list for each data.
-  #' Merge then, and remove duplicates.
-  #' Create a single SE with all data and the merged row_ranges. 
-  #' 
-  #' @param expdat_list list of experimental data of different projects (SE object)
-  #' @returns SummarizedExperiment object with the merged experimental data
-  
-  ## MT - Check if select shared features
-  expdat_fltr <- mergeSEs(expdat_list, do.scale = FALSE, commonOnly = TRUE, addDatasetPrefix = FALSE)
-  
-  ## Create a rowrange list
-  rowRanges_list <- lapply(expdat_list, function(expdat){
-    rowRanges_df <- as.data.frame(expdat@rowRanges)
-    rowRanges_df$rownames <- row.names(rowRanges_df)
-    return(rowRanges_df)
-  })
-  rowRanges_merged_tmp <- do.call(rbind, c(rowRanges_list, make.row.names = FALSE))
-  rowRanges_merged_tmp <- unique(rowRanges_merged_tmp)
-  rownames(rowRanges_merged_tmp) <- rowRanges_merged_tmp$rownames
-  rowRanges_merged <- GRanges(rowRanges_merged_tmp)
-  
-  ##
-  expdat_merged <- SummarizedExperiment(assays = SimpleList(counts = assay(expdat_fltr)),
-                                        rowRanges = rowRanges_merged[row.names(expdat_fltr)],
-                                        colData = expdat_fltr@colData,
-                                        metadata = expdat_fltr@metadata)
-  
-  return(expdat_merged)
-}
-
-## MT - TO REMOVE
-mergeSEs_block <- function(expdat_list, SE){
-  if(length(expdat_list) == 0){
-    return(SE)
-  }
-  expdat = expdat_list[[1]]
-  expdat_list = expdat_list[-1]
-  gc()
-  if(length(SE) < 1){
-    SE = expdat
-  }else{
-    expdat = expdat[match(rownames(SE),rownames(expdat)),]
-    SE = SummarizedExperiment::cbind(SE, expdat)
-  }
-  rm(expdat)
-  gc()
-  return(mergeSEs_block(expdat_list, SE, nb+1))
-}
-
-## MT - TO REMOVE
-createRowRanges <- function(expdat_list){
-  rowRanges_list <- lapply(expdat_list, function(expdat){
-    rowRanges_df <- as.data.frame(expdat@rowRanges)
-    rowRanges_df$rownames <- row.names(rowRanges_df)
-    return(rowRanges_df)
-  })
-  
-  ## Create a rowrange list
-  rowRanges_merged_tmp <- do.call(rbind, c(rowRanges_list, make.row.names = FALSE))
-  rowRanges_merged_tmp <- unique(rowRanges_merged_tmp)
-  rownames(rowRanges_merged_tmp) <- rowRanges_merged_tmp$rownames
-  rowRanges_merged <- GRanges(rowRanges_merged_tmp)
-  
-  rm(rowRanges_merged_tmp)
-  gc()
-  return(rowRanges_merged)
-}
-
-## MT - TO REMOVE
-mergeExperimentalData_1 <- function(expdat_list){
-  #' Merge SE object of several TCGA projects into one SE object.
-  #'
-  #' SE: SummarizedExperiment
-  #' Create a row_range list for each data.
-  #' Merge then, and remove duplicates.
-  #' Create a single SE with all data and the merged row_ranges.
-  #'
-  #' @param expdat_list list of experimental data of different projects (SE object)
-  #' @returns SummarizedExperiment object with the merged experimental data
-  
-  
-  
-  ## MT - Check if select shared features
-  ## expdat_fltr <- mergeSEs(expdat_list, do.scale = FALSE, commonOnly = TRUE, addDatasetPrefix = FALSE)
-  SE = list()
-  block_size = 3
-  SE = mergeSEs_block(expdat_list, SE, block_size)
-  
-  gc()
-  
-  return(SE)
-}
 
 ## ----- FILTER DATA
 
@@ -850,11 +876,6 @@ createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMe
   
   print("mRNA data preprocessing")
   
-  ## Read experimental data files
-  # expdat_mRNA = mRNAPreprocessing(Prjct = Prjct, brcds_mRNA = brcds_mRNA_SS, InputDir = InputDir)
-  ## Filtering
-  # expdat_mRNA_fltr <- mRNAFiltering(expdat_mRNA = expdat_mRNA)
-  
   ## Read and merge files
   expdat_mRNA_merged <- mRNAdataPreparation(Prjcts = Prjct, brcds_mRNA = brcds_mRNA_SS, InputDir = InputDir)
   
@@ -874,11 +895,6 @@ createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMe
   ## ---------- miRNA data preprocessing
   
   print("miRNA data preprocessing")
-  
-  ## Read experimental data files
-  # expdat_miRNA = miRNAPreprocessing(Prjct = Prjct, brcds_miRNA = brcds_miRNA_SS, InputDir = InputDir)
-  ## Filtering
-  # expdat_miRNA_fltr <- miRNAFiltering(expdat_miRNA = expdat_miRNA)
   
   ## Read and merge files
   expdat_miRNA_merged <- miRNAdataPreparation(Prjcts = Prjct, brcds_miRNA = brcds_miRNA_SS, InputDir = InputDir)
@@ -900,9 +916,6 @@ createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMe
   
   print("DNAme data preprocessing")
   
-  ## Read experimental data files
-  # expdat_DNAme <- DNAmePreprocessing(Prjct = Prjct, brcds_DNAme = brcds_DNAme_SS, InputDir = InputDir)
-  
   ## Read and merge files 
   expdat_DNAme_merged <- DNAmedataPreparation(Prjcts = Prjct, brcds_DNAme = brcds_DNAme_SS, InputDir = InputDir)
   
@@ -921,9 +934,6 @@ createSubsetOneProject <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, GeoMe
   if(if_SNV){
     
     brcds_SNV_SS = brcds_SS$brcds_SNV_SS[[SS]]
-    
-    ## Read experimental data files
-    # expdat_SNV <- SNVPreprocessing(Prjct = Prjct, brcds_SNV = brcds_SNV_SS, InputDir = InputDir)
     
     ## Reand and merge files
     expdat_SNV_merged <- SNVdataPreparation(Prjcts = Prjct, brcds_SNV = brcds_SNV_SS, InputDir = InputDir)
@@ -990,11 +1000,6 @@ createSubsetMultiProjects <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, Ge
   
   print("mRNA data preprocessing")
   
-  ## Read experimental data files
-  # expdat_mRNA_list = sapply(Prjcts, mRNAPreprocessing, brcds_mRNA = brcds_mRNA_SS, InputDir = InputDir)
-  ## Merge experimental data into only one SE object
-  # expdat_mRNA_merged <- mergeExperimentalData(expdat_list = expdat_mRNA_list)
-  
   ## Read and merge files
   expdat_mRNA_merged <- mRNAdataPreparation(Prjcts = Prjcts, brcds_mRNA = brcds_mRNA_SS, InputDir = InputDir)
   
@@ -1017,11 +1022,6 @@ createSubsetMultiProjects <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, Ge
   ## ---------- miRNA data preprocessing
   
   print("miRNA data preprocessing")
-  
-  ## Read experimental data files
-  # expdat_miRNA_list = sapply(Prjcts, miRNAPreprocessing, brcds_miRNA = brcds_miRNA_SS, InputDir = InputDir)
-  ## Merge experimental data into only one SE object
-  # expdat_miRNA_merged <- mergeSEs(expdat_miRNA_list, do.scale = FALSE, commonOnly = TRUE, addDatasetPrefix = FALSE)
   
   ## Read and merge files
   expdat_miRNA_merged <- miRNAdataPreparation(Prjcts = Prjcts, brcds_miRNA = brcds_miRNA_SS, InputDir = InputDir)
@@ -1046,11 +1046,6 @@ createSubsetMultiProjects <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, Ge
   
   print("DNAme data preprocessing")
   
-  ## Read experimental data files
-  # expdat_DNAme_list <- sapply(Prjcts, DNAmePreprocessing, brcds_DNAme = brcds_DNAme_SS, InputDir = InputDir)
-  ## Merge experimental data into only one SE object
-  # expdat_DNAme_merged <- mergeExperimentalData(expdat_list = expdat_DNAme_list)
-  
   ## Read and merge files
   expdat_DNAme_merged <- DNAmedataPreparation(Prjcts = Prjcts, brcds_DNAme = brcds_DNAme_SS, InputDir = InputDir)
   
@@ -1069,11 +1064,6 @@ createSubsetMultiProjects <- function(SSnb, brcds_SS, if_SNV = FALSE, OutDir, Ge
   if(if_SNV){
     
     brcds_SNV_SS = brcds_SS$brcds_SNV_SS[[SS]]
-    
-    ## Read experimental data files
-    # expdat_SNV_list <- lapply(Prjcts, SNVPreprocessing, brcds_SNV = brcds_SNV_SS, InputDir = InputDir)
-    ## Merge experimental data into only one SE object
-    # expdat_SNV_merged <- do.call(rbind, expdat_SNV_list)
     
     ## Read and merge files
     expdat_SNV_merged <- SNVdataPreparation(Prjcts = Prjcts, brcds_SNV = brcds_SNV_SS, InputDir = InputDir)
