@@ -137,7 +137,7 @@ for(ss in 1:brcds_SS$SS_count){
   TL_output <- transferLearning_function(TL_param = TL_param, MaxIterations= MaxIterations, MinIterations = MinIterations, minFactors = minFactors, 
                             StartDropFactor = StartDropFactor, FreqDropFactor = FreqDropFactor, StartELBO = StartELBO, 
                             FreqELBO = FreqELBO, DropFactorTH = DropFactorTH, ConvergenceIts = ConvergenceIts, ConvergenceTH = ConvergenceTH, 
-                            CenterTrg = CenterTrg, outputDir = TL_SSOutDir)
+                            CenterTrg = CenterTrg, ss_start_time = ss_start_time, outputDir = TL_SSOutDir)
   
   ## save overall meta data
   script_end_time = Sys.time()

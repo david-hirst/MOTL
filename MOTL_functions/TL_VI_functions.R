@@ -735,7 +735,7 @@ VarExplFun <- function(views, YGauss, ZMu_0, Fctrzn_Lrn_W0, ZMu, Fctrzn_Lrn_W){
 
 transferLearning_function <- function(TL_param, MaxIterations, MinIterations, minFactors, 
                                       StartDropFactor, FreqDropFactor, StartELBO, FreqELBO, DropFactorTH, ConvergenceIts, ConvergenceTH,
-                                      CenterTrg, PoisRateCstnt = 0.0001, outputDir = "./"){
+                                      CenterTrg, PoisRateCstnt = 0.0001, ss_start_time = NULL, outputDir = "./"){
   #'
   #' Transfer Learning with Variational Inference
   #'
@@ -752,6 +752,7 @@ transferLearning_function <- function(TL_param, MaxIterations, MinIterations, mi
   #' @param ConvergenceTH 
   #' @param CenterTrg Center Trg with own means or use estimated intercepts
   #' @param PoisRateCstnt amount to add to the poison rate function to avoid errors
+  #' @param ss_start_time analyse start time (steps before transfer learning)
   #' @param outputDir output directory name
   #' @returns list of transfer learning data
   
