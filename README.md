@@ -4,13 +4,15 @@
 
 This repository contains code used to recreate analyses described in the MOTL paper, as well as functions that can be downloaded to apply MOTL to a target dataset in order to perform matrix factorization with transfer learning.
 
-The repository is organised into three folders:
+The repository is organised into four folders:
 
-[SimulationStudy](https://github.com/david-hirst/MOTL/tree/main/SimulationStudy): This folder contains scripts for carrying out the simulation study. More details in the [00_SimStudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/00_SimStudy_ReadMe.md) file
+[MOTL_functions](https://github.com/david-hirst/MOTL/tree/main/MOTL_functions): This folder contains functions to apply MOTL (and others related to the TCGA data downloading/preprocessing).
+
+[SimulationStudy](https://github.com/david-hirst/MOTL/tree/main/SimulationStudy): This folder contains scripts for carrying out the simulation study. More details in the [00_SimStudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/00_SimStudy_ReadMe.md) file.
 
 [TCGAStudy](https://github.com/david-hirst/MOTL/tree/main/TCGAStudy): This folder contains scripts for carrying out the TCGA study, as well as functions that can be downloaded to apply MOTL to a target dataset of interest. More details in the [00_TCGAstudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/00_TCGAstudy_ReadMe.md) file.
 
-[GlioblastomaUseCase](https://github.com/david-hirst/MOTL/tree/main/GlioblastomaUseCase): This folder contains scripts for the use case illustration of MOTL with glioblastoma data. MOre details in the [00_GlioblastomaUseCase_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/00_GlioblastomaUseCase_ReadMe.md) file.
+[GlioblastomaUseCase](https://github.com/david-hirst/MOTL/tree/main/GlioblastomaUseCase): This folder contains scripts for the use case illustration of MOTL with glioblastoma data. More details in the [00_GlioblastomaUseCase_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/00_GlioblastomaUseCase_ReadMe.md) file.
 
 ## How to use MOTL on your own data 
 
@@ -23,7 +25,7 @@ You will firstly need to download the following files of functions from this git
 
 Next download the learning dataset factorization files from [this zenodo repository](https://zenodo.org/records/10848217) and unzip.
 
-### load libraries and functions
+### Load libraries and functions
 ```
 library(SummarizedExperiment)
 library(DESeq2)
@@ -41,16 +43,18 @@ Location of learning data downloaded from zenodo
 LrnDir = 'LrnData'
 LrnFctrnDir = file.path(LrnDir,'Lrn_5000D_Fctrzn_100K_001TH')
 ```
-Specify whether to center the target dataste during processing or to leave uncentered and use enstmated learning dataset intercepts
+Specify whether to center the target dataset during processing or to leave uncentered and use estimated learning dataset intercepts
 ```
 CenterTrg = FALSE
 ```
 Import the learning dataset metadata, factorization, and initialise values
 ```
+## Import learning data
 expdat_meta_Lrn = readRDS(file.path(LrnDir,"expdat_meta.rds"))
 InputModel = file.path(LrnFctrnDir,"Model.hdf5")
 Fctrzn = load_model(file = InputModel)
 
+## Initialise values from factorization
 viewsLrn = Fctrzn@data_options$views
 likelihoodsLrn = Fctrzn@model_options$likelihoods
 MLrn = Fctrzn@dimensions$M
@@ -66,7 +70,7 @@ Record the time that the pre-processing starts
 ss_start_time = Sys.time()
 ```
 
-Start with some or all of the following omics matrix, all with features in rows and samples in columns. The names of these matrices are not important. The set of column names should be the same for each omics, although the order is not important as they will be ordered automatically. The order of the features is not important, however the type of id used to name the features should be consistant with the TCGA learning dataset, as outlined below.
+Start with some or all of the following omics matrix, all with **features in rows** and **samples in columns**. The names of these matrices are not important. The set of column names should be the same for each omics, although the order is not important as they will be ordered automatically. The order of the features is not important, however the type of id used to name the features should be consistant with the TCGA learning dataset, as outlined below.
 
 **expdat_mRNA**: a matrix of mRNA raw counts, genes in rows, samples in columns. Row names should be Ensemble ids without the version suffix; for example *ENSG00000000005*.
 
@@ -74,14 +78,14 @@ Start with some or all of the following omics matrix, all with features in rows 
 
 **expdat_DNAme**: a matrix of DNA methylation M-values, cpgs in rows, samples in columns. Row names should be cpg probe ids from either the 450 or epic illumina array; for example *cg09364122*.
 
-**expdat_SNV**: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. Row names should be Hugo symbols; for example *AKAP13*.
+**expdat_SNV**: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. Row names should be HGCN symbols; for example *AKAP13*.
 
 In the case of expdat_mRNA, a version suffix will need to be added to be consisant with the naming in the TCGA learning data factorization.
 ```
 expdat_mRNA = mRNA_addVersion(expdat = expdat_mRNA, Lrndat = Fctrzn@expectations$W$mRNA)
 ```
 
-Create a list of the matrices, using the following naming convention for each omics.
+Create a list of the matrices, using the following naming convention for each omics
 ```
 YTrg_list = list(
   mRNA = expdat_mRNA,
@@ -109,7 +113,7 @@ TL_param = initTransferLearningParamaters(YTrg = YTrg_list, views = views,
 
 ### Transfer learning factorization with MOTL
 
-Specify output folder and paramaters for MOTL
+Specify output folder and parameters for MOTL
 ```
 TL_OutDir = 'MOTL_Fctrzn'
 if(!dir.exists(TL_OutDir)){
@@ -127,15 +131,15 @@ MinIterations = 2 #
 ConvergenceIts = 2 # numbe rof consectutive checks in a row for which the change in elbo is below the threshold
 ConvergenceTH = 0.0005 # change in elbo threshold
 ```
-run MOTL to infer and save the factorization as an rds file
+Run MOTL to infer and save the factorization as an rds file
 ```
 TL_data = transferLearning_function(TL_param = TL_param, MaxIterations = MaxIterations, MinIterations =  MinIterations, 
                                     minFactors = minFactors, StartDropFactor = StartDropFactor, FreqDropFactor = FreqDropFactor, 
                                     StartELBO = StartELBO, FreqELBO = FreqELBO, DropFactorTH = DropFactorTH, 
                                     ConvergenceIts = ConvergenceIts, ConvergenceTH = ConvergenceTH, 
-                                    CenterTrg = CenterTrg, outputDir = TL_OutDir)
+                                    CenterTrg = CenterTrg, ss_start_time = ss_start_time, outputDir = TL_OutDir)
 ```
-Extract the Z and W matrices from the MOTL factrization. Z is the inferred score matrix for the target dataset: rows and samples, and columns are factors. Each W has features in the columns and factors in the rows. Factor names correspond to the name form the learning dataset factorization
+Extract the Z and W matrices from the MOTL factorization. Z is the inferred score matrix for the target dataset: rows are samples, and columns are factors. Each W has features in the columns and factors in the rows. Factor names correspond to the name from the learning dataset factorization.
 ```
 ZMu = TL_data$ZMu
 W_mRNA = TL_data$Fctrzn_Lrn_W$mRNA
