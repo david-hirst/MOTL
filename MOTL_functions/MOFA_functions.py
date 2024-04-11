@@ -6,6 +6,13 @@ Created on Tues April 9 2024
 @author: Morgane Térézol
 """
 
+## Load require libraries
+
+import os
+import numpy as np
+from mofapy2.run.entry_point import entry_point
+import json
+
 ## FUNCTIONS
 
 def import_data(G, M, omics, InputDir, metadata):
