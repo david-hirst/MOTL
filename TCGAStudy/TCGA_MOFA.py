@@ -43,7 +43,7 @@ data_options = {
 training_options = {
     "TrainingIter": 10000, ## max training iterations
     "freqELBOChk": 5, ## how often to check the elbo, this is the default for R so using this
-    "drop_factor_threshold": 0.001,
+    "drop_factor_threshold": 0.01,
     "seed": 1234567
 }
 
