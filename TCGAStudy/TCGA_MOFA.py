@@ -13,8 +13,8 @@ Created on Fri Apr 28 11:02:59 2023
 from time import time
 import os
 import json
-import numpy as np
-from mofapy2.run.entry_point import entry_point
+# import numpy as np
+# from mofapy2.run.entry_point import entry_point
 
 ## LOAD FUNCTIONS
 from MOFA_functions import *
