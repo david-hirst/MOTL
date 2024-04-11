@@ -72,7 +72,7 @@ ent = runMOFA(data, data_options, likelihoods, omics, Prior_K, training_options)
 script_end_time = time()
 
 ## SAVE MODEL AND RESULTS
-saveResultsModel(ent, OutputDir, training_options, data_options, G, script_start_time, script_end_time)
+saveResultsModel(ent, OutputDir, training_options, data_options, G, likelihoods, script_start_time, script_end_time)
 
 
 #################################################################################################################
@@ -149,4 +149,4 @@ for ss in range(SS_count):
     script_end_time = time()
 
     ## SAVE MODEL AND RESULTS
-    saveResultsModel(ent, OutputDir, training_options, data_options, G, script_start_time, script_end_time)
+    saveResultsModel(ent, OutputDir, training_options, data_options, G, likelihoods, script_start_time, script_end_time)
