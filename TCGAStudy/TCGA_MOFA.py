@@ -78,12 +78,14 @@ saveResultsModel(ent, OutputDir, training_options, data_options, G, script_start
 #################################################################################################################
 #################################################################################################################
 
+#### factorize target datasets (subsets of the full/reference datasets)
+
 
 ## PARAMETERS
 ## input
 Prjct = "Trg_LAML_SKCM_SS5"
 TopD = '5000D'  ## number of features maintained during variance filtering XD
-Prior_K = 100 # how many factors to start with - 100 for Lrn, trying 30/60 for Trg Full, 100 for Trg multi
+Prior_K = 10 # how many factors to start with - number of samples for target subset datasets
 
 omics = ['mRNA','miRNA', 'DNAme']
 likelihoods = ['gaussian', 'gaussian', 'gaussian']
