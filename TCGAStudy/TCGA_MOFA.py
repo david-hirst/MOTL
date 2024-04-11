@@ -24,7 +24,7 @@ from MOFA_functions import *
 ## input
 Prjct = "Trg_LAML_SKCM_Full"
 TopD = '5000D'  ## number of features maintained during variance filtering XD
-Prior_K = 30 # how many factors to start with - 100 for Lrn, trying 30/60 for Trg Full, 100 for Trg multi
+Prior_K = 100 # how many factors to start with - 100 for Lrn, trying 30/60 for Trg Full, 100 for Trg multi
 
 omics = ['mRNA','miRNA', 'DNAme']
 likelihoods = ['gaussian', 'gaussian', 'gaussian']
