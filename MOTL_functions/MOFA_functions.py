@@ -85,7 +85,7 @@ def runMOFA(data, data_options, likelihoods, omics, Prior_K, training_options):
 
     return(ent)
 
-def saveResultsModel(ent, OutputDir, training_options, data_options, G, script_start_time, script_end_time):
+def saveResultsModel(ent, OutputDir, training_options, data_options, G, likelihoods, script_start_time, script_end_time):
 
     ## MODEL
     ModelOutFile = os.path.join(OutputDir, 'Model' + '.hdf5')
