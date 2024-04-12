@@ -88,7 +88,7 @@ for (Prjct in Prjcts){
   TrgFull_Views = TrgFull_Fctrzn@data_options$views
   
   ## Import TrgSS meta data  
-  TrgSS_meta_data = readRDS(file.path(TrgSSDir,'expdat_meta.rds'))
+  TrgSS_meta_data = readRDS(file.path(TrgSSDir,'expdat_meta_SS.rds'))
   Trg_smpls = readRDS(file.path(TrgSSDir,'brcds_SS.rds'))
   if (regexpr('[_]',Prjct)>0){
     Trg_prjcts = Trg_smpls$prjcts_SS
