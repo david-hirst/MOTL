@@ -38,7 +38,7 @@ SS_count = integer()
 for (Prjct in Prjcts){
   
   TrgSSDir = paste0('Trg_',Prjct,'_SS',SS_size[Prjct],'_',TopD,'D')
-  TrgSS_meta_data = readRDS(file.path(TrgSSDir,'expdat_meta.rds'))
+  TrgSS_meta_data = readRDS(file.path(TrgSSDir,'expdat_meta_SS.rds'))
   
   for (fm in FctrznMethods){
     
