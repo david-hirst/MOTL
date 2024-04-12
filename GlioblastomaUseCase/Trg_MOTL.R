@@ -305,7 +305,7 @@ TL_data = transferLearning_function(TL_param = TL_param, MaxIterations = MaxIter
                                     minFactors = minFactors, StartDropFactor = StartDropFactor, FreqDropFactor = FreqDropFactor, 
                                     StartELBO = StartELBO, FreqELBO = FreqELBO, DropFactorTH = DropFactorTH, 
                                     ConvergenceIts = ConvergenceIts, ConvergenceTH = ConvergenceTH, 
-                                    CenterTrg = CenterTrg, outputDir = TL_OutDir)
+                                    CenterTrg = CenterTrg, ss_start_time = ss_start_time, outputDir = TL_OutDir)
 
 script_end_time = Sys.time()
 #### save the metadata
