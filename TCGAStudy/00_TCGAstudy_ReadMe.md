@@ -2,17 +2,12 @@
 
 This folder contains the functions and workflows used to carry out the TCGA evaluation study.
 
-## Functions
-[TCGA_preprocessedData_functions.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_preprocessedData_functions.R): This file contains functions for preparing TCGA learning, reference and target datasets.
-
-[TL_VI_functions.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TL_VI_functions.R): This file contains the main functions for applying MOTL to carry out matrix factorization with transfer learning.
-
 ## Workflows for data acquisition, pre-processing and factorization
-[TCGA_downloadData.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_downloadData.R): This file contains the functions and workflow for downloading and saving TCGA multi-omics data
+[TCGA_downloadData.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_downloadData.R): This file contains the workflow for downloading and saving TCGA multi-omics data
 
 [TCGA_preprocessedData.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_preprocessedData.R): This file contains examples of workflows for creating and pre-processing TCGA Learning, reference, and target datasets
 
-[TCGA_MOFA.py](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_MOFA.py): This file contains functions and workflows for factorizating TCGA learning, reference and target datasets with MOFA
+[TCGA_MOFA.py](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_MOFA.py): This file contains workflows for factorizating TCGA learning, reference and target datasets with MOFA
 
 [TCGA_Lrn_Intercepts.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_Lrn_Intercepts.R): This file contains the workflow for inferring intercepts for a MOFA factorization of a TCGA learning dataset
 
