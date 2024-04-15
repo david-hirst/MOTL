@@ -8,7 +8,7 @@ The following scripts were used to carry out use case application of MOTL and co
 
 [Trg_pre_MOFA.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/Trg_pre_MOFA.R): This file contains the workflow for pre-processing the glioblastoma target dataset before MOFA factorization
 
-[Lrn_Trg_MOFA.py](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/Lrn_Trg_MOFA.py): THis file contains functions ad workflow for performing MOFA factorization on the learning and target datasets
+[Lrn_Trg_MOFA.py](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/Lrn_Trg_MOFA.py): This file contains the workflow for performing MOFA factorization on the learning and target datasets
 
 [TCGA_Lrn_Intercepts.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/TCGA_Lrn_Intercepts.R): This file contains the workflow for inferring intercepts for the MOFA factorization of the learning dataset
 
