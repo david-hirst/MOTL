@@ -4,15 +4,15 @@ We downloaded the mRNA and DNA methylation zip files from [this zenodo repositor
 
 The following scripts were used to carry out use case application of MOTL and comparison with direct MOFA faxtorization.
 
-[TCGA_Lrn_pre_MOFA.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/TCGA_Lrn_pre_MOFA.R): This file contains the workflow for pre-processing the TCGA learning dataset before MOFA factorization
+[01_TCGA_Lrn_pre_MOFA.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/01_TCGA_Lrn_pre_MOFA.R): This file contains the workflow for pre-processing the TCGA learning dataset before MOFA factorization
 
-[Trg_pre_MOFA.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/Trg_pre_MOFA.R): This file contains the workflow for pre-processing the glioblastoma target dataset before MOFA factorization
+[02_Trg_pre_MOFA.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/02_Trg_pre_MOFA.R): This file contains the workflow for pre-processing the glioblastoma target dataset before MOFA factorization
 
-[Lrn_Trg_MOFA.py](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/Lrn_Trg_MOFA.py): This file contains the workflow for performing MOFA factorization on the learning and target datasets
+[03_Lrn_Trg_MOFA.py](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/03_Lrn_Trg_MOFA.py): This file contains the workflow for performing MOFA factorization on the learning and target datasets
 
-[TCGA_Lrn_Intercepts.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/TCGA_Lrn_Intercepts.R): This file contains the workflow for inferring intercepts for the MOFA factorization of the learning dataset
+[04_TCGA_Lrn_Intercepts.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/04_TCGA_Lrn_Intercepts.R): This file contains the workflow for inferring intercepts for the MOFA factorization of the learning dataset
 
-[Trg_post_MOFA.ipynb](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/Trg_post_MOFA.ipynb): This file contains the workflow for investigating the MOFA factorization of the glioblastoma target dataset
+[05_Trg_post_MOFA.ipynb](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/05_Trg_post_MOFA.ipynb): This file contains the workflow for investigating the MOFA factorization of the glioblastoma target dataset
 
-[Trg_MOTL.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/Trg_MOTL.R): This file contains the workflow for pre-processing the target dataset before MOTL factorization, appplication of MOTL, investigating the MOTL factorization, and comparison with the MOFA factorization
+[06_Trg_MOTL.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/06_Trg_MOTL.R): This file contains the workflow for pre-processing the target dataset before MOTL factorization, appplication of MOTL, investigating the MOTL factorization, and comparison with the MOFA factorization
 
