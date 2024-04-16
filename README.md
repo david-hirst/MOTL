@@ -20,7 +20,9 @@ MOTL is run using R.
 
 ### Downloads
 You will firstly need to download the following files of functions from this github site:
+
 [TCGA_preprocessedData.R](https://github.com/david-hirst/MOTL/blob/main/MOTL_functions/TCGA_preprocessedData_functions.R)
+
 [TL_VI_functions.R](https://github.com/david-hirst/MOTL/blob/main/MOTL_functions/TL_VI_functions.R)
 
 Next download the learning dataset factorization files from [this zenodo repository](https://zenodo.org/records/10848217) and unzip.
