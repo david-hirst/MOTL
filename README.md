@@ -6,11 +6,11 @@ This repository contains code used to recreate analyses described in the MOTL pa
 
 The repository is organised into four folders:
 
-[MOTL_functions](https://github.com/david-hirst/MOTL/tree/main/MOTL_functions): This folder contains functions to apply MOTL (and others related to the TCGA data downloading/preprocessing).
+[MOTL_functions](https://github.com/david-hirst/MOTL/tree/main/MOTL_functions): This folder contains the functions that are used to apply MOTL, functions for downloading and preprocessing TCGA multi-omics data, and functions for applying MOFA to a multi-omics learning or target dataset.
 
-[SimulationStudy](https://github.com/david-hirst/MOTL/tree/main/SimulationStudy): This folder contains scripts for carrying out the simulation study. More details in the [00_SimStudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/00_SimStudy_ReadMe.md) file.
+[SimulationStudy](https://github.com/david-hirst/MOTL/tree/main/SimulationStudy): This folder contains scripts for carrying out the evaluation protocol using simulated data. More details in the [00_SimStudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/00_SimStudy_ReadMe.md) file.
 
-[TCGAStudy](https://github.com/david-hirst/MOTL/tree/main/TCGAStudy): This folder contains scripts for carrying out the TCGA study, as well as functions that can be downloaded to apply MOTL to a target dataset of interest. More details in the [00_TCGAstudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/00_TCGAstudy_ReadMe.md) file.
+[TCGAStudy](https://github.com/david-hirst/MOTL/tree/main/TCGAStudy): This folder contains scripts for carrying out the evaluation protocol using TCGA multi-omics data. More details in the [00_TCGAstudy_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/00_TCGAstudy_ReadMe.md) file.
 
 [GlioblastomaUseCase](https://github.com/david-hirst/MOTL/tree/main/GlioblastomaUseCase): This folder contains scripts for the use case illustration of MOTL with glioblastoma data. More details in the [00_GlioblastomaUseCase_ReadMe.md](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/00_GlioblastomaUseCase_ReadMe.md) file.
 
@@ -20,8 +20,8 @@ MOTL is run using R.
 
 ### Downloads
 You will firstly need to download the following files of functions from this github site:
-[TCGA_preprocessedData.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TCGA_preprocessedData.R)
-[TL_VI_functions.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/TL_VI_functions.R)
+[TCGA_preprocessedData.R](https://github.com/david-hirst/MOTL/blob/main/MOTL_functions/TCGA_preprocessedData_functions.R)
+[TL_VI_functions.R](https://github.com/david-hirst/MOTL/blob/main/MOTL_functions/TL_VI_functions.R)
 
 Next download the learning dataset factorization files from [this zenodo repository](https://zenodo.org/records/10848217) and unzip.
 
