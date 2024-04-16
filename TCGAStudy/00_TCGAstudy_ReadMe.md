@@ -22,3 +22,5 @@ NOTE: THE CODE IN THE PREVIOUS SECTION IS AN OPTIMIZED VERSION OF THE CODE WE US
 
 [08_TCGA_FactorMatching.ipynb](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/08_TCGA_FactorMatching.ipynb): This file contains the workflow we used for associating differentially active groundtruth TCGA factors with genesets.
 
+[09_TCGA_Fctrzn_Times.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/09_TCGA_Fctrzn_Times.R): This file contains code we used for calculating average preprocessing and factorization times
+
