@@ -1,8 +1,12 @@
 # MOTL: multi-omics matrix factorization with transfer learning
 
+MOTL infers latent factor values for a multi-omics target dataset, consisting of a small number of samples, by incorporating latent factor values already inferred with a MOFA factorization of a large, heterogeneous, learning dataset.
+
 <p align="center">
-<img src="images/MOTL_Schema.png" width="600" height="200"> 
+<img src="images/MOTL_Schema.png" width="604" height="169"> 
 </p>
+
+See the MOTL preprint on [bioRxiv](https://doi.org/10.1101/2024.03.22.586210)
 
 ## MOTL code repository contents
 
