@@ -1,5 +1,9 @@
 # MOTL: multi-omics matrix factorization with transfer learning
 
+<p align="center">
+<img src="images/MOTL_Schema.png" width="300" height="600"> 
+</p>
+
 ## MOTL code repository contents
 
 This repository contains code used to recreate analyses described in the MOTL paper, as well as functions that can be downloaded to apply MOTL to a target dataset in order to perform matrix factorization with transfer learning.
