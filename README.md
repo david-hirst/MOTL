@@ -1,7 +1,7 @@
 # MOTL: multi-omics matrix factorization with transfer learning
 
 <p align="center">
-<img src="images/MOTL_Schema.png" width="300" height="600"> 
+<img src="images/MOTL_Schema.png" width="600" height="200"> 
 </p>
 
 ## MOTL code repository contents
