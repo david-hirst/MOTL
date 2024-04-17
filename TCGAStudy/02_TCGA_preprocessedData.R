@@ -265,7 +265,7 @@ saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_l
 ## Each target dataset is a multi-omics dataset for a subset of the samples used to create the corresponding reference dataset.
 
 print(Sys.time())
-print("Reference set - one project")
+print("Reference and target datasets - one project")
 
 ## ---------------- SET ENVIRONMENT ----
 
@@ -531,7 +531,7 @@ write(expdat_meta.json,file.path(OutDir_SS,'expdat_meta_SS.json'))
 ## Each target dataset is a multi-omics dataset for a subset of the samples used to create the corresponding reference dataset.
 
 print(Sys.time())
-print("Target set - multi project")
+print("Reference and target datasets - multi project")
 
 ## ---------------- SET ENVIRONMENT ----
 
@@ -548,7 +548,7 @@ set.seed(Seed)
 
 ## -------------------------------------
 
-## ----------------- SELECT SAMPLES ----
+## ----------------- SELECT REFERENCE DATASET SAMPLES ----
 
 print(Sys.time())
 print("Select samples")
@@ -731,21 +731,22 @@ saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_l
 print(Sys.time())
 print("Target datasets")
 
-SS_size <- 5
+## PARAMETERS FOR IMPORTING DATA
 # output directory used for reference (full target) dataset
 OutDir = paste0('Trg_', paste0(substr(Prjcts,6,nchar(Prjcts)),collapse='_'), '_Full_',TopD,"D")
+expdat_meta = readRDS(file.path(OutDir,'expdat_meta.rds')) # metadata for reference dataset
 
-## PARAMETERS IMPORTATION
 ## CREATE A DIRECTORY TO SAVE THE FINAL FILES
+SS_size <- 5 # HOW MANY SAMPLES FROM EACH PROJECT
 SSOutDir = paste0('Trg_', paste0(substr(Prjcts,6,nchar(Prjcts)),collapse='_'), '_SS',SS_size, '_', TopD,"D")
 if(!dir.exists(SSOutDir)){
   dir.create(SSOutDir, showWarnings = FALSE, recursive = TRUE)
 }
 
-## PARAMETERS IMPORTATION
-expdat_meta = readRDS(file.path(OutDir,'expdat_meta.rds'))
 
-## ----------------- SELECT SAMPLES ---
+## ----------------- SELECT SAMPLES FOR EACH TARGET DATA---
+
+# This is done by subsetting the list of barcodes (sample ids) used to create the reference dataset
 
 Projects = unique(expdat_meta$brcds_mRNA$prjct)
 
@@ -802,7 +803,7 @@ saveRDS(brcds_SS, file.path(SSOutDir,'brcds_SS.rds'))
 
 gc()
 
-## ------- CREATION OF SUBSETS DATA ---
+## ------- CREATION OF TARGET DATASETS (SUBSETS OF THE REFERENCE DATASET) ---
 
 ## IMPORT METADATA FROM PREVIOUS STEP
 brcds_SS = readRDS(file.path(SSOutDir,'brcds_SS.rds'))
