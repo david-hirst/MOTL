@@ -1,6 +1,10 @@
-############
-#### PLot factorization results
-##################
+##########################
+#### Factorization evaluation summary
+###########################
+
+# The purpose of this script is to summarize the evaluation metrics calculated for factorizations of TCGA TARGET datasets
+# Plots and summary tables are created
+# generalized least squares is used to assess the statistical significance of differences between factorization methods
 
 ## libraries
 library(ggplot2)
