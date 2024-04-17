@@ -3,6 +3,10 @@
 ##### Evaluation of factorizations
 #############
 
+# This script is used to evaluate factorizations of TCGA multi-omics TARGET datasets
+# Evaluation is done by comparing the factorization to the MOFA factorization of the corresponding REFERENCE dataset
+# The factorization of the REFERENCE dataset is treated as groundtruth as it is built form all available samples for the selected projects
+
 ## Packages
 
 library(MOFA2)
@@ -25,17 +29,17 @@ Prjcts = c('LAML_PAAD', 'LAML_SKCM','PAAD_SKCM',
 TopD = 5000 ## how many features were retained
 
 SS_size = c(5, 5, 5,
-            5) ## how many samples per cancer type in each sub set
+            5) ## how many samples per cancer type in each TARGET dataset
 names(SS_size)=Prjcts
 
 TrgFullK = c(100, 100, 100,
-             100) # Starting K for the full trg set factorization
+             100) # Starting K for the REFERENCE dataset factorization
 names(TrgFullK)=Prjcts
 
 TrgFullTH = '01TH' #string with digits to right of decimal for drop threshold followed by TH
 
 TrgSSK = c(10, 10, 10,
-           15) # Starting K for the trg set direct factorization
+           15) # Starting K for the TARGET data direct factorization (MOFA without transfer learning)
 names(TrgSSK) = Prjcts
 
 FctrznMethods = c('Direct', 'TL_VI', 'Random_TL')
@@ -78,16 +82,16 @@ for (Prjct in Prjcts){
   print(Prjct)
 
   ### directories  
-  TrgFullRootDir = file.path(paste0('Trg_',Prjct,'_Full_',TopD,'D'))
-  TrgFullDir = file.path(TrgFullRootDir, paste0('Fctrzn_',TrgFullK[Prjct],'K_',TrgFullTH))
-  TrgSSDir = paste0('Trg_',Prjct,'_SS',SS_size[Prjct],'_',TopD,'D')
+  TrgFullRootDir = file.path(paste0('Trg_',Prjct,'_Full_',TopD,'D')) # location of REFERENCE dataset
+  TrgFullDir = file.path(TrgFullRootDir, paste0('Fctrzn_',TrgFullK[Prjct],'K_',TrgFullTH)) # location of REFERENCE dataset factorization
+  TrgSSDir = paste0('Trg_',Prjct,'_SS',SS_size[Prjct],'_',TopD,'D') # location of TARGET datasets
   
-  ### import Trg Full factorization 
+  ### import REFERENCE dataset factorization 
   InputModel = file.path(TrgFullDir,"Model.hdf5")
   TrgFull_Fctrzn = load_model(file = InputModel)
   TrgFull_Views = TrgFull_Fctrzn@data_options$views
   
-  ## Import TrgSS meta data  
+  ## Import TARGET dataset meta data  
   TrgSS_meta_data = readRDS(file.path(TrgSSDir,'expdat_meta_SS.rds'))
   Trg_smpls = readRDS(file.path(TrgSSDir,'brcds_SS.rds'))
   if (regexpr('[_]',Prjct)>0){
@@ -95,7 +99,7 @@ for (Prjct in Prjcts){
   }
   Trg_smpls = Trg_smpls$smpls_SS
   
-  ## if appropriate get significant factors from full factorization
+  ## if appropriate get significant factors from REFERENCE dataset factorization (only for multi-project datasets)
   if (regexpr('[_]',Prjct)>0){
     # get Z matrix
     TrgFull_Z_all = TrgFull_Fctrzn@expectations$Z$group0
@@ -121,13 +125,13 @@ for (Prjct in Prjcts){
     GT_positives = length(TrgFull_SigFct)  
   }
   
-  ## loop through subsets and factorization methods
+  ## loop through TARGET datasets and factorization methods
   
   for (ss in 1:TrgSS_meta_data$SS_count){
     
-    SS = paste0('SS_',ss)
+    SS = paste0('SS_',ss) # TARGET dataset identifier - the subset number 
     print(SS)
-    ## get scores from factorization of full trg set for ss samples
+    ## get scores from factorization of REFERENCE dataset for samples in the TARGET dataset
     TrgSS_smpls = Trg_smpls[[SS]]
     TrgFull_Z = TrgFull_Fctrzn@expectations$Z$group0
     TrgFull_smpls_kp = is.element(rownames(TrgFull_Z),TrgSS_smpls)
@@ -338,7 +342,7 @@ for (Prjct in Prjcts){
         
         TrgSS_prjcts = as.factor(Trg_prjcts[[SS]][rownames(TrgSS_Z)])
        
-        ## significant factors from SS factorization
+        ## significant factors from TARGET dataset factorization
         TrgSS_Z_pv = numeric()
         for (fctr in 1:ncol(TrgSS_Z)){
           if (length(levels(TrgSS_prjcts)) > 2){
@@ -351,7 +355,7 @@ for (Prjct in Prjcts){
         TrgSS_SigFct = which(TrgSS_Z_pv<pvalueTH)
         TrgSS_SigFct = unique(TrgSS_W_BHs$Full[is.element(TrgSS_W_BHs$SS,TrgSS_SigFct)])
         
-        ## compare to factorization of full target dataset
+        ## compare to factorization of REFERENCE dataset
         
         Inf_positives = length(TrgSS_SigFct)
         True_positives = sum(is.element(TrgSS_SigFct,TrgFull_SigFct))
