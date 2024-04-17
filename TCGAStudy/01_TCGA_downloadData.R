@@ -1,6 +1,12 @@
 ## MT - 20231108
 
-## FUNCTIONS TO DOWNLOAD TCGA DATA FROM GDC PORTAL
+## CALL FUNCTION TO DOWNLOAD TCGA DATA FROM GDC PORTAL
+
+## Running this script downloads mRNA, miRNA, DNAme and SNV omics data for TCGA samples.
+## It does this for each sample, from each TCGA project, using the TCGAbiolinks R package.
+## For each TCGA project and omics, files are downloaded separately for each sample.
+## The data is consolidated and an .rds is saved for each project and omics.
+## Each .rds file is saved in the directory specified below.
 
 ## LIBRARIES
 library(TCGAbiolinks)
