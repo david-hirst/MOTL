@@ -6,7 +6,14 @@ MOTL infers latent factor values for a multi-omics target dataset, consisting of
 <img src="images/MOTL_Schema.png" width="604" height="169"> 
 </p>
 
-See the MOTL preprint on [bioRxiv](https://doi.org/10.1101/2024.03.22.586210)
+Overview of MOTL, our transfer learning approach to joint multi-omics matrix factorization based on variational Bayesian inference. 
+
+**a** : A multi-omics learning dataset, $\boldsymbol{L}$, consisting of $M$ omics matrices, $\boldsymbol{L}^{(m)}$, $m=1,...,M$,  is factorized with MOFA to infer a matrix of feature weights, $\boldsymbol{W}^{(m)}$, 
+ vector of feature-wise intercepts, $\boldsymbol{a}^{(m)}$, and a vector of feature-wise precision parameter values, $\boldsymbol{\tau}^{(m)}$, for each $\boldsymbol{L}^{(m)}$. 
+ 
+ **b** : The feature weight, intercept, and precision parameter values, inferred from the factorization of $\boldsymbol{L}$, are incorporated into the factorization of a multi-omics target dataset, $\boldsymbol{T}$, for which MOTL infers a matrix of sample scores, $\boldsymbol{Z}$, with variational inference.
+
+For more detail see the MOTL preprint on [bioRxiv](https://doi.org/10.1101/2024.03.22.586210)
 
 ## MOTL code repository contents
 
