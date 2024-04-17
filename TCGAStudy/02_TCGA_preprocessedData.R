@@ -1,5 +1,31 @@
 ## MT - 20231110
 
+#############
+## CREATE AND PRE-PROCESS TCGA LEARNING, REFERENCE, AND TARGET MULTI-OMICS DATASETS
+#############
+
+## This script is divided into 3 main sections
+## Sections are run independently, depending on the desired task
+
+## 01 LEARNING DATASET
+## This section has the code for creating and pre-processing a TCGA multi-omics learning dataset
+## The outputs include metadata and a csv file for each omics matrix
+## The outputs are used as input for a MOFA factorization of the learning dataset
+
+## 02 REFERENCE AND TARGET DATASETS FROM ONE PROJECT
+## This section has the code for creating and pre-processing single-project TCGA multi-omics reference, and target, datasets
+## The TCGA project and the required omics are specified 
+## Then sample barcodes are selected - 1 profile per sample submittor, only samples with full multi-omics profiles
+## The reference dataset is created from the barcodes, and then pre-processed. The outputs can be used as input to MOFA factorization
+## The barcodes are then subsetted randomly. Each subset of barcodes is used to create a target dataset.
+## Target datasets are pre-processed, and the output can be used as input to MOFA factorization.
+## The full set of barcodes, and the barcode subsets are saved to be used in the MOTL application and for evaluation purposes
+
+
+## 03 REFERENCE AND TARGET DATASETS FROM MULTIPLE PROJECTS
+## Same as previous section, but the reference dataset, and each target dataset, contain samples from multiple TCGA projects
+
+
 ## LIBRARIES
 library(TCGAbiolinks)
 library(SummarizedExperiment)
@@ -11,7 +37,7 @@ library(dplyr)
 source("TCGA_preprocessedData_functions.R")
 
 ## ------------------------------------------------------------------------------
-## ------------------------------------------------------------ LEARNING SET ----
+## ------------------------------------------------------------ 01 LEARNING DATASET ----
 
 print(Sys.time())
 print("Learning set")
@@ -20,8 +46,8 @@ print("Learning set")
 
 ## SET PARAMETERS 
 PrjctExcl = c("TCGA-PAAD","TCGA-LAML","TCGA-SKCM","TCGA-GBM") # projects to exclude
-InputDir = "DownloadedData_unfltrd"
-BarcodesDir = 'Lrn_barcodes'
+InputDir = "DownloadedData_unfltrd" # where the downloaded TCGA data was saved
+BarcodesDir = 'Lrn_barcodes' # where the barcodes (sample ids) for the learning dataset will be saved
 GeoMeans = "Lrn"
 TopD = 5000 ## how many features to retain
 
@@ -30,7 +56,7 @@ Seed = 1234567
 mode(Seed) = 'integer'
 set.seed(Seed)
 
-## EXCLUDE 4 CANCER TYPES
+## PROJECTS TO INCLUDE IN THE LEARNING DATASET
 Prjcts = selectProjects(InputDir = InputDir, PrjctExcl = PrjctExcl)
 ## -------------------------------------
 
@@ -113,9 +139,9 @@ brcds_DNAme = readRDS(file.path(BarcodesDir,'brcds_DNAme.rds'))
 brcds_SNV = readRDS(file.path(BarcodesDir,'brcds_SNV.rds'))
 
 ## TO COMMENT
-## subset based on instersection of projects - in case only subset selected in either script
-Prjcts = Prjcts[c(1:5)]
-Prjcts = unique(base::intersect(Prjcts,brcds_mRNA$prjct))
+## subset based on instersection of projects - in case only subset is desired for testing purposes
+# Prjcts = Prjcts[c(1:5)]
+# Prjcts = unique(base::intersect(Prjcts,brcds_mRNA$prjct))
 
 brcds_mRNA = brcds_mRNA[is.element(brcds_mRNA$prjct,Prjcts),]
 brcds_miRNA = brcds_miRNA[is.element(brcds_miRNA$prjct,Prjcts),]
@@ -228,16 +254,24 @@ saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_l
 ## ------------------------------------------------------------------------------
 
 ## ------------------------------------------------------------------------------
-## ------------------------------------------------ TARGET SET / ONE PROJECT ----
+## ------------------------------------------------ 02 REFERENCE AND TARGET DATASETS FROM ONE PROJECT ----
+
+## This section has 2 parts.
+## Firstly a dataset is created for the reference dataset
+## The reference dataset is the full target dataset for a selected project.
+## This means it contains multi-omics data for all samples.
+## We use factorizations of the reference dataset to derive groundtruth factors 
+## Then target datasets are created. 
+## Each target dataset is a multi-omics dataset for a subset of the samples used to create the corresponding reference dataset.
 
 print(Sys.time())
-print("Target set - one project")
+print("Reference set - one project")
 
 ## ---------------- SET ENVIRONMENT ----
 
 ## SET PARAMETERS
-Prjct = "TCGA-LAML"
-InputDir = "DownloadedData_unfltrd"
+Prjct = "TCGA-LAML" # the TCGA project to use for creating reference and target datasets
+InputDir = "DownloadedData_unfltrd" # location of downloaded TCGA data
 GeoMeans = "Trg"
 TopD = 5000 ## how many features to retain
 
@@ -254,7 +288,7 @@ print(Sys.time())
 print("Select samples")
 
 ## CREATE A DIRECTORY TO SAVE THE FINAL FILES
-BarcodesDir <- paste0('Trg_',substr(Prjct,6,nchar(Prjct)), "_barcodes")
+BarcodesDir <- paste0('Trg_',substr(Prjct,6,nchar(Prjct)), "_Full_barcodes")
 if(!dir.exists(BarcodesDir)){
   dir.create(BarcodesDir, showWarnings = FALSE, recursive = TRUE)
 }
@@ -291,13 +325,13 @@ saveRDS(brcds_DNAme,file.path(BarcodesDir,'brcds_DNAme.rds'))
 
 ## -------------------------------------
 
-## --------- CREATION OF TARGET SET ----
+## --------- CREATION OF REFERENCE DATASET (THE FULL TARGET DATASET BEFORE SUBSETTING) ----
 
 print(Sys.time())
-print("Target set creation")
+print("Reference set creation")
 
 ## CREATE A DIRECTORY TO SAVE THE FINAL FILES
-OutDir = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),"_", TopD,"D")
+OutDir = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),'_Full_', TopD,"D")
 if(!dir.exists(OutDir)){
   dir.create(OutDir, showWarnings = FALSE, recursive = TRUE)
 }
@@ -412,13 +446,13 @@ saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_l
 
 ## -------------------------------------
 
-## ---------------- TARGET SUBSET ----
+## ---------------- TARGET DATASETS (SUBSETS OF THE REFERENCE DATASET) ----
 
 print(Sys.time())
-print("Target set subset")
+print("Target datasets")
 
-## PARAMETERS IMPORTATION
-OutDir = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),"_", TopD,"D")
+## PARAMETERS FOR IMPORTING DATA
+OutDir = paste0('Trg_',substr(Prjct,6,nchar(Prjct)),'_Full_', TopD,"D") # output directory used for reference (full target) dataset
 expdat_meta = readRDS(file.path(OutDir,'expdat_meta.rds'))
 Prjcts = expdat_meta$Prjcts
 TopD = expdat_meta$TopD
@@ -486,7 +520,15 @@ write(expdat_meta.json,file.path(OutDir_SS,'expdat_meta_SS.json'))
 ## ------------------------------------------------------------------------------
 
 ## ------------------------------------------------------------------------------
-## ---------------------------------------------- TARGET SET / MULTI PROJECT ----
+## ---------------------------------------------- 03 REFERENCE AND TARGET DATASETS FROM MULTIPLE PROJECTS ----
+
+## This section has 2 parts.
+## Firstly a dataset is created for the reference dataset
+## The reference dataset is the full target dataset for the selected projects.
+## This means it contains multi-omics data for all samples.
+## We use factorizations of the reference dataset to derive groundtruth factors 
+## Then target datasets are created. 
+## Each target dataset is a multi-omics dataset for a subset of the samples used to create the corresponding reference dataset.
 
 print(Sys.time())
 print("Target set - multi project")
@@ -564,10 +606,10 @@ saveRDS(brcds_DNAme,file.path(BarcodesDir,'brcds_DNAme.rds'))
 
 ## -------------------------------------
 
-## --------- CREATION OF TARGET SET ----
+## --------- CREATION OF REFERENCE DATASET (THE FULL TARGET DATASET BEFORE SUBSETTING) ----
 
 print(Sys.time())
-print("Target set creation")
+print("Reference set creation")
 
 ## CREATE A DIRECTORY TO SAVE THE FINAL FILES
 OutDir = paste0('Trg_', paste0(substr(Prjcts,6,nchar(Prjcts)),collapse='_'), '_Full_',TopD,"D")
@@ -684,12 +726,13 @@ saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_l
 
 ## -------------------------------------
 
-## ------------------ TARGET SUBSET ----
+## ---------------- TARGET DATASETS (SUBSETS OF THE REFERENCE DATASET) ----
 
 print(Sys.time())
-print("Target subset")
+print("Target datasets")
 
 SS_size <- 5
+# output directory used for reference (full target) dataset
 OutDir = paste0('Trg_', paste0(substr(Prjcts,6,nchar(Prjcts)),collapse='_'), '_Full_',TopD,"D")
 
 ## PARAMETERS IMPORTATION
