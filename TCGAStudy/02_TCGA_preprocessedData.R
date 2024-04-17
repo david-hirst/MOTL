@@ -25,6 +25,12 @@
 ## 03 REFERENCE AND TARGET DATASETS FROM MULTIPLE PROJECTS
 ## Same as previous section, but the reference dataset, and each target dataset, contain samples from multiple TCGA projects
 
+## NOTE: 
+## What we refer to in the MOTL paper as a REFERENCE datasets we originally named FULL TARGET datasets
+## Hence the names of objects, created by our code, that correspond to REFERENCE datasets typically include 'trg_XXX_full'
+## What we refer to in the MOTL paper as a TARGET dataset we originally named TARGET SUSBETS
+## Hence the names of objects, created by our code, that correspond to TARGET datasets typically include 'trg_XXX_ss'
+
 
 ## LIBRARIES
 library(TCGAbiolinks)
@@ -257,12 +263,12 @@ saveMetadata(OutDir = OutDir, Seed = Seed, smpls = smpls, expdat_list = expdat_l
 ## ------------------------------------------------ 02 REFERENCE AND TARGET DATASETS FROM ONE PROJECT ----
 
 ## This section has 2 parts.
-## Firstly a dataset is created for the reference dataset
-## The reference dataset is the full target dataset for a selected project.
+## Firstly the REFERENCE dataset is created and pre-processed
+## The REFERENCE dataset is the FULL TARGET dataset for a selected project.
 ## This means it contains multi-omics data for all samples.
-## We use factorizations of the reference dataset to derive groundtruth factors 
-## Then target datasets are created. 
-## Each target dataset is a multi-omics dataset for a subset of the samples used to create the corresponding reference dataset.
+## We use factorizations of the REFERENCE dataset to derive groundtruth factors 
+## Then TARGET datasets are created and pre-processed. 
+## Each TARGET dataset is a multi-omics dataset for a SUBSET of the samples used to create the corresponding REFERENCE dataset.
 
 print(Sys.time())
 print("Reference and target datasets - one project")
@@ -523,12 +529,12 @@ write(expdat_meta.json,file.path(OutDir_SS,'expdat_meta_SS.json'))
 ## ---------------------------------------------- 03 REFERENCE AND TARGET DATASETS FROM MULTIPLE PROJECTS ----
 
 ## This section has 2 parts.
-## Firstly a dataset is created for the reference dataset
-## The reference dataset is the full target dataset for the selected projects.
+## Firstly the REFERENCE dataset is created and pre-processed
+## The REFERENCE dataset is the FULL TARGET dataset for the selected projects.
 ## This means it contains multi-omics data for all samples.
-## We use factorizations of the reference dataset to derive groundtruth factors 
-## Then target datasets are created. 
-## Each target dataset is a multi-omics dataset for a subset of the samples used to create the corresponding reference dataset.
+## We use factorizations of the REFERENCE dataset to derive groundtruth factors 
+## Then TARGET datasets are created and pre-processed. 
+## Each TARGET dataset is a multi-omics dataset for a SUBSET of the samples used to create the corresponding REFERENCE dataset.
 
 print(Sys.time())
 print("Reference and target datasets - multi project")
