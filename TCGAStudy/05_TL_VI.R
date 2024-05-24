@@ -74,6 +74,9 @@ Fctrzn@expectations[["TauLn"]] = sapply(viewsLrn, TauLn_calculation, likelihoods
 ## load or calculate E[W^2] values
 Fctrzn@expectations[["WSq"]] = sapply(viewsLrn, WSq_calculation, Fctrzn, LrnFctrnDir)
 
+## Calculate the intercepts from the factorization
+intercepts_calculation(Seed, expdat_meta_Lrn, Fctrzn, FctrznDir = ".", LrnDir)
+
 ## import the W intercepts if not centering, create vectors containing 0s if centering
 Fctrzn@expectations[["W0"]] = sapply(viewsLrn, W0_calculation, CenterTrg, Fctrzn, LrnFctrnDir)
 

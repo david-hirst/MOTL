@@ -464,6 +464,184 @@ W0_calculation <- function(view, CenterTrg, Fctrzn, LrnFctrnDir){
   return(W0)
 }
 
+intercepts_calculation <- function(seed, expdat_meta, Fctrzn, FctrznDir, LrnDir){
+  #'
+  #'
+  #' @param seed
+  #' @param expdat_meta learning set metadata
+  #' @param Fctrzn
+  #' @param FctrznDir
+  #' @param LrnDir
+  
+  print("Estimation of the intercept")
+  
+  fit_start_time = Sys.time()
+  
+  ## Init seed
+  mode(Seed) = 'integer'
+  set.seed(Seed)
+  
+  ## Extract data from factorization model object
+  views = Fctrzn@data_options$views
+  names(views) <- views
+  likelihoods = Fctrzn@model_options$likelihoods
+  M = Fctrzn@dimensions$M
+  D = Fctrzn@dimensions$D
+  
+  # loop through the views and estimate the intercept
+  # for gaussian data its just the mean
+  # for other data will try mle with a naive estimator as backup
+  
+  intercepts_list <- lapply(views, function(view, likelihoods, D, YTmp, expdat_meta, Fctrzn){
+    
+    print(view)
+    
+    # likelihood = likelihoods[which(names(likelihoods)==view)]
+    # DTmp = D[which(names(D)==view)]
+    likelihood = likelihoods[view]
+    DTmp = D[view]
+    
+    # YTmp = read.table(file = file.path(ExpDataDir, paste0(view,'.csv')), sep = ",")
+    YTmp <- as.data.frame(data.table::fread(file = file.path(LrnDir, paste0(view,'.csv')), sep = ","))
+    YTmp = t(as.matrix(YTmp))
+    rownames(YTmp) = expdat_meta$smpls
+    colnames(YTmp) = expdat_meta[[which(names(expdat_meta) == paste0("ftrs_",view))]] 
+    
+    ZWTmp = Fctrzn@expectations$Z$group0 %*% 
+      t(Fctrzn@expectations$W[[which(names(Fctrzn@expectations$W)==view)]])
+    
+    # mean(colnames(YTmp)==colnames(ZWTmp))
+    # mean(rownames(YTmp)==rownames(ZWTmp))
+    
+    invisible(gc())
+    
+    if(likelihood=="gaussian"){
+      InterceptsNaive = colMeans(YTmp, na.rm = TRUE)
+      Intercepts = InterceptsNaive
+      InterceptsMethod = rep("Naive",length(Intercepts))
+      names(InterceptsMethod) = names(InterceptsNaive)
+    } else if(likelihood == "poisson"){
+      
+      ## naive intercept based on approximation to feature means of ZW
+      InterceptsNaive = as.vector(log(-1 + exp(colMeans(YTmp))))
+      
+      ## mle estimate of intercept for ZW
+      ## if optimiser fails for a feature will return the naive estimate
+      
+      Intercepts_df <- do.call(rbind, lapply(c(1:DTmp), function(d, YTmp, ZWTmp){
+        ## compute for each feature vector
+        YTmp_d = YTmp[,d]
+        YTmp_d_keep = !is.na(YTmp_d)
+        YTmp_d = YTmp_d[YTmp_d_keep]
+        
+        ZWTmp_d = ZWTmp[YTmp_d_keep,d]
+        
+        ## NLL function to optimize
+        # nLL = function(interceptMLE) -sum(stats::dpois(YLrn[,d], log(1 + exp(ZWLrn[,d]+interceptMLE)), log = TRUE))
+        nLL = function(interceptMLE) -sum(log(
+          stats::dpois(YTmp_d, log(1 + exp(ZWTmp_d+interceptMLE)))[stats::dpois(YTmp_d[,d], log(1 + exp(ZWTmp_d+interceptMLE)))!=0]
+        ))
+        
+        ## try to solve it and use the result otherwise use the naive estimate
+        # interceptMLEfit = try(as.vector(stats4::mle(nLL, start=list(interceptMLE=0))@coef[1]))
+        interceptMLEfit = try(as.vector(stats4::mle(nLL, start=list(interceptMLE=InterceptsNaive[d]))@coef[1]))
+        
+        if (class(interceptMLEfit)=="try-error"){
+          InterceptsTmp = InterceptsNaive[d]
+          InterceptsMethodTmp = "Naive"
+        } else {
+          InterceptsTmp = interceptMLEfit
+          InterceptsMethodTmp = "MLE"
+        }
+        
+        intercept <- data.frame("intercept" = InterceptsTmp, "Method" = InterceptsMethodTmp, row.names = names(InterceptsNaive)[d])
+        
+        return(intercept)
+      }, YTmp, ZWTmp))
+      
+      Intercepts = setNames(Intercepts_df$intercept, row.names(Intercepts_df))
+      InterceptsMethod = setNames(Intercepts_df$Method, row.names(Intercepts_df))
+      
+    } else if(likelihood=="bernoulli"){
+      
+      ## naive intercept based on approximation to feature means of ZW
+      InterceptsNaive = log(colMeans(YTmp, na.rm = TRUE)/(1-colMeans(YTmp, na.rm = TRUE)))
+      
+      ## mle estimate of intercept for ZW
+      ## if optimiser fails for a feature will return the naive estimate
+      
+      # DTmp = 10
+      
+      Intercepts_df <- do.call(rbind, lapply(c(1:DTmp), function(d, YTmp, ZWTmp){
+        ## compute for each feature vector
+        
+        YTmp_d = YTmp[,d]
+        YTmp_d_keep = !is.na(YTmp_d)
+        YTmp_d = YTmp_d[YTmp_d_keep]
+        
+        ZWTmp_d = ZWTmp[YTmp_d_keep,d]
+        
+        ## NLL function to optimize
+        nLL = function(InterceptMLE) -sum(log(
+          dbinom(YTmp_d, size=1, plogis(ZWTmp_d+InterceptMLE))[dbinom(YTmp_d, size=1, plogis(ZWTmp_d+InterceptMLE))!=0]
+        ))
+        
+        ## try to solve it and use the result otherwise use the naive estimate
+        
+        interceptMLEfit = try(stats4::mle(nLL, start=list(InterceptMLE=InterceptsNaive[d]))@coef[1])
+        
+        if (class(interceptMLEfit)=="try-error"){
+          InterceptsTmp = InterceptsNaive[d]
+          InterceptsMethodTmp = "Naive"
+        } else {
+          InterceptsTmp = interceptMLEfit
+          InterceptsMethodTmp = "MLE"
+        }
+        intercept <- data.frame("intercept" = InterceptsTmp, "Method" = InterceptsMethodTmp, row.names = names(InterceptsNaive)[d])
+        
+        return(intercept)
+        
+      }, YTmp, ZWTmp))
+      
+      Intercepts = setNames(Intercepts_df$intercept, row.names(Intercepts_df))
+      InterceptsMethod = setNames(Intercepts_df$Method, row.names(Intercepts_df))
+      
+    } else{
+      InterceptsNaive = numeric()
+      Intercepts = numeric()
+      InterceptsMethod = character()
+    }
+    
+    intercepts_list <- list(
+      "InterceptsNaive" = InterceptsNaive,
+      "Intercepts" = Intercepts,
+      "InterceptsMethod" = InterceptsMethod)
+    
+    return(intercepts_list)
+    
+  }, likelihoods, D, YTmp, expdat_meta, Fctrzn)
+  
+  ## save the intercepts in the relevant factorization folder
+  
+  fit_end_time = Sys.time()
+  
+  EstimatedIntercepts <- list(
+    "Seed" = Seed,
+    "InterceptsNaive" = lapply(views, function(v, intercepts_list){return(intercepts_list[[v]][["InterceptsNaive"]])}, intercepts_list), 
+    "Intercepts" = lapply(views, function(v, intercepts_list){return(intercepts_list[[v]][["Intercepts"]])}, intercepts_list),
+    "InterceptsMethod" = lapply(views, function(v, intercepts_list){return(intercepts_list[[v]][["InterceptsMethod"]])}, intercepts_list),
+    "fit_start_time" = fit_start_time,
+    "fit_end_time" = fit_end_time
+  )
+  
+  saveRDS(EstimatedIntercepts,file.path(FctrznDir,"EstimatedIntercepts.rds"))
+  
+  print("finished")
+  
+  
+  
+}
+
 ## --------------------------------------------------------------
 
 
