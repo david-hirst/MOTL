@@ -464,22 +464,17 @@ W0_calculation <- function(view, CenterTrg, Fctrzn, LrnFctrnDir){
   return(W0)
 }
 
-intercepts_calculation <- function(seed, expdat_meta, Fctrzn, FctrznDir, LrnDir){
+intercepts_calculation <- function(expdat_meta, Fctrzn, FctrznDir, ExpDataDir){
   #'
   #'
-  #' @param seed
   #' @param expdat_meta learning set metadata
   #' @param Fctrzn
   #' @param FctrznDir
-  #' @param LrnDir
+  #' @param ExpDataDir
   
   print("Estimation of the intercept")
   
   fit_start_time = Sys.time()
-  
-  ## Init seed
-  mode(Seed) = 'integer'
-  set.seed(Seed)
   
   ## Extract data from factorization model object
   views = Fctrzn@data_options$views
@@ -496,13 +491,11 @@ intercepts_calculation <- function(seed, expdat_meta, Fctrzn, FctrznDir, LrnDir)
     
     print(view)
     
-    # likelihood = likelihoods[which(names(likelihoods)==view)]
-    # DTmp = D[which(names(D)==view)]
-    likelihood = likelihoods[view]
-    DTmp = D[view]
+    likelihood = likelihoods[which(names(likelihoods)==view)]
+    DTmp = D[which(names(D)==view)]
     
     # YTmp = read.table(file = file.path(ExpDataDir, paste0(view,'.csv')), sep = ",")
-    YTmp <- as.data.frame(data.table::fread(file = file.path(LrnDir, paste0(view,'.csv')), sep = ","))
+    YTmp <- as.data.frame(data.table::fread(file = file.path(ExpDataDir, paste0(view,'.csv')), sep = ","))
     YTmp = t(as.matrix(YTmp))
     rownames(YTmp) = expdat_meta$smpls
     colnames(YTmp) = expdat_meta[[which(names(expdat_meta) == paste0("ftrs_",view))]] 
@@ -637,9 +630,6 @@ intercepts_calculation <- function(seed, expdat_meta, Fctrzn, FctrznDir, LrnDir)
   saveRDS(EstimatedIntercepts,file.path(FctrznDir,"EstimatedIntercepts.rds"))
   
   print("finished")
-  
-  
-  
 }
 
 ## --------------------------------------------------------------
