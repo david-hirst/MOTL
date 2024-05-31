@@ -22,8 +22,7 @@ set.seed(Seed)
 ### Set directories
 
 ExpDataDir = 'Lrn_5000D'
-## FctrznDir = file.path(ExpDataDir,'Fctrzn_100K_001TH')
-FctrznDir = file.path(ExpDataDir,'Fctrzn_100K')
+FctrznDir = file.path(ExpDataDir,'Fctrzn_100K_001TH')
 
 ## import meta data and model
 
@@ -32,7 +31,9 @@ expdat_meta = readRDS(file.path(ExpDataDir,'expdat_meta.rds'))
 InputModel = file.path(FctrznDir,"Model.hdf5")
 Fctrzn = load_model(file = InputModel)
 
-#### ICI LE CHANGEMENT
+# loop through the views and estimate the intercept
+# for gaussian data its just the mean
+# for other data will try mle with a naive estimator as backup
 
 intercepts_calculation(expdat_meta = expdat_meta, 
                        Fctrzn = Fctrzn,
@@ -43,29 +44,29 @@ intercepts_calculation(expdat_meta = expdat_meta,
 
 ## CONTROL RESULTS
 
-# mo <- readRDS(file = "../EstimatedIntercepts.rds")
-# da <- readRDS(file = "TCGAStudy/TCGA_database/MOFA_TL/Lrn_5000D/Fctrzn_100K/EstimatedIntercepts.rds")
-# 
-# 
-# lapply(names(mo), function(n){
-#   print(n)
-#   table(mo[[n]] == da[[n]])
-# })
-# 
-# names(mo) == names(da)
-# mo$Seed == da$Seed
-# lapply(names(mo$InterceptsNaive), function(n){
-#   print(n)
-#   table(round(mo$InterceptsNaive[[n]]) == round(da$InterceptsNaive[[n]]))
-# })
-# lapply(names(mo$Intercepts), function(n){
-#   print(n)
-#   table(round(mo$Intercepts[[n]]) == round(da$Intercepts[[n]]))
-# })
-# lapply(names(mo$InterceptsMethod), function(n){
-#   print(n)
-#   table(mo$InterceptsMethod[[n]] == da$InterceptsMethod[[n]])
-# })
+mo <- readRDS(file = "../EstimatedIntercepts.rds")
+da <- readRDS(file = "TCGAStudy/TCGA_database/MOFA_TL/UseCase_Santamarina/Lrn_5000D/Fctrzn_100K_001TH/EstimatedIntercepts_ORIGINAL.rds")
+
+
+lapply(names(mo), function(n){
+  print(n)
+  table(mo[[n]] == da[[n]])
+})
+
+names(mo) == names(da)
+mo$Seed == da$Seed
+lapply(names(mo$InterceptsNaive), function(n){
+  print(n)
+  table(round(mo$InterceptsNaive[[n]]) == round(da$InterceptsNaive[[n]]))
+})
+lapply(names(mo$Intercepts), function(n){
+  print(n)
+  table(round(mo$Intercepts[[n]]) == round(da$Intercepts[[n]]))
+})
+lapply(names(mo$InterceptsMethod), function(n){
+  print(n)
+  table(mo$InterceptsMethod[[n]] == da$InterceptsMethod[[n]])
+})
 
 
 
