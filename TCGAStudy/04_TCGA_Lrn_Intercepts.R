@@ -11,7 +11,7 @@ library(MOFA2)
 library(rhdf5)
 library(rjson)
 
-fit_start_time = Sys.time()
+source("TL_VI_functions.R")
 
 Seed = 1234567
 mode(Seed) = 'integer'
@@ -33,6 +33,27 @@ intercepts_calculation(expdat_meta = expdat_meta,
                        Fctrzn = Fctrzn,
                        FctrznDir = FctrznDir, 
                        ExpDataDir = ExpDataDir)
+
+## CONTROL RESULTS
+
+# mo <- readRDS(file = "../../EstimatedIntercepts.rds")
+# da <- readRDS(file = "TCGAStudy/TCGA_database/MOFA_TL/Lrn_5000D/Fctrzn_100K/EstimatedIntercepts.rds")
+# 
+# names(mo) == names(da)
+# mo$Seed == da$Seed
+# lapply(names(mo$InterceptsNaive), function(n){
+#   print(n)
+#   table(round(mo$InterceptsNaive[[n]]) == round(da$InterceptsNaive[[n]]))
+# })
+# lapply(names(mo$Intercepts), function(n){
+#   print(n)
+#   table(round(mo$Intercepts[[n]]) == round(da$Intercepts[[n]]))
+# })
+# lapply(names(mo$InterceptsMethod), function(n){
+#   print(n)
+#   table(mo$InterceptsMethod[[n]] == da$InterceptsMethod[[n]])
+# })
+
 
 # views = Fctrzn@data_options$views
 # likelihoods = Fctrzn@model_options$likelihoods

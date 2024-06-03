@@ -13,8 +13,6 @@ library(rjson)
 
 source("TL_VI_functions.R")
 
-fit_start_time = Sys.time()
-
 Seed = 1234567
 mode(Seed) = 'integer'
 set.seed(Seed)
@@ -46,12 +44,6 @@ intercepts_calculation(expdat_meta = expdat_meta,
 
 mo <- readRDS(file = "../EstimatedIntercepts.rds")
 da <- readRDS(file = "TCGAStudy/TCGA_database/MOFA_TL/UseCase_Santamarina/Lrn_5000D/Fctrzn_100K_001TH/EstimatedIntercepts_ORIGINAL.rds")
-
-
-lapply(names(mo), function(n){
-  print(n)
-  table(mo[[n]] == da[[n]])
-})
 
 names(mo) == names(da)
 mo$Seed == da$Seed
