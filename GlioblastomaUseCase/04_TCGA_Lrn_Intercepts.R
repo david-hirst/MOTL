@@ -40,25 +40,25 @@ intercepts_calculation(expdat_meta = expdat_meta,
 
 
 
-## CONTROL RESULTS
-
-mo <- readRDS(file = "../EstimatedIntercepts.rds")
-da <- readRDS(file = "TCGAStudy/TCGA_database/MOFA_TL/UseCase_Santamarina/Lrn_5000D/Fctrzn_100K_001TH/EstimatedIntercepts_ORIGINAL.rds")
-
-names(mo) == names(da)
-mo$Seed == da$Seed
-lapply(names(mo$InterceptsNaive), function(n){
-  print(n)
-  table(round(mo$InterceptsNaive[[n]]) == round(da$InterceptsNaive[[n]]))
-})
-lapply(names(mo$Intercepts), function(n){
-  print(n)
-  table(round(mo$Intercepts[[n]]) == round(da$Intercepts[[n]]))
-})
-lapply(names(mo$InterceptsMethod), function(n){
-  print(n)
-  table(mo$InterceptsMethod[[n]] == da$InterceptsMethod[[n]])
-})
+# ## CONTROL RESULTS
+# 
+# mo <- readRDS(file = "../EstimatedIntercepts.rds")
+# da <- readRDS(file = "TCGAStudy/TCGA_database/MOFA_TL/UseCase_Santamarina/Lrn_5000D/Fctrzn_100K_001TH/EstimatedIntercepts_ORIGINAL.rds")
+# 
+# names(mo) == names(da)
+# mo$Seed == da$Seed
+# lapply(names(mo$InterceptsNaive), function(n){
+#   print(n)
+#   table(round(mo$InterceptsNaive[[n]]) == round(da$InterceptsNaive[[n]]))
+# })
+# lapply(names(mo$Intercepts), function(n){
+#   print(n)
+#   table(round(mo$Intercepts[[n]]) == round(da$Intercepts[[n]]))
+# })
+# lapply(names(mo$InterceptsMethod), function(n){
+#   print(n)
+#   table(mo$InterceptsMethod[[n]] == da$InterceptsMethod[[n]])
+# })
 
 
 
