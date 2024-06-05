@@ -34,28 +34,3 @@ intercepts_calculation(expdat_meta = expdat_meta,
                        FctrznDir = FctrznDir, 
                        ExpDataDir = ExpDataDir)
 
-###
-### some testing
-###
-
-# EstimatedIntercepts = readRDS(file.path(FctrznDir,"EstimatedIntercepts.rds"))
-# Intercepts = EstimatedIntercepts$Intercepts
-# InterceptsMethod = EstimatedIntercepts$InterceptsMethod
-# InterceptsNaive = EstimatedIntercepts$InterceptsNaive
-# 
-# 
-# hist(Intercepts$mRNA)
-# sum(is.na(Intercepts$mRNA))
-# 
-# hist(Intercepts$miRNA)
-# sum(is.na(Intercepts$miRNA))
-# 
-# hist(Intercepts$DNAme)
-# sum(is.na(Intercepts$DNAme))
-# 
-# table(InterceptsMethod$SNV)
-# sum(is.na(Intercepts$SNV))
-# 
-# rnd_idx = sample(1:length(InterceptsNaive$SNV),1000,replace=FALSE)
-# plot(x=InterceptsNaive$SNV[rnd_idx],y=Intercepts$SNV[rnd_idx])
-# abline(a=0,b=1)
