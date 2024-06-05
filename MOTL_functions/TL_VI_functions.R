@@ -467,10 +467,11 @@ W0_calculation <- function(view, CenterTrg, Fctrzn, LrnFctrnDir){
 intercepts_calculation <- function(expdat_meta, Fctrzn, FctrznDir, ExpDataDir){
   #'
   #'
-  #' @param expdat_meta learning set metadata
-  #' @param Fctrzn
-  #' @param FctrznDir
-  #' @param ExpDataDir
+  #' @param expdat_meta learning dataset metadata
+  #' @param Fctrzn learning dataset factorization model
+  #' @param FctrznDir learning dataset factorization directory name
+  #' @param ExpDataDir learning dataset directory name
+  #' 
   
   print("Estimation of the intercept")
   
