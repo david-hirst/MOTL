@@ -21,6 +21,7 @@ library(pheatmap)
 library(gridExtra)
 library(ggplot2)
 library(RColorBrewer)
+library(stringr)
 
 source('TCGA_preprocessedData_functions.R')
 source('TL_VI_functions.R')
@@ -672,3 +673,104 @@ ggsave(filename = file.path('Results', 'heatmaps_0clusters.png'),
 write.table(smpls.df,
             file.path('Results', 'SampleTable.csv'),
             quote = FALSE, sep=',', na='', row.names = FALSE, col.names = TRUE)
+
+##########################
+### PLot of GSEA results
+##########################
+
+library(dplyr)
+library(pheatmap)
+library(gridExtra)
+library(ggplot2)
+library(RColorBrewer)
+library(stringr)
+library(GSA)
+library(gmt)
+
+## import the gene sets csv
+SigGeneSets_Combined = read.table(file.path('Results', 'SigGeneSets_Combined.csv'), 
+                                  header = TRUE, sep=',')
+
+## some tidying up
+
+SigGeneSets_Combined$GeneSet = substr(SigGeneSets_Combined$pathway,
+                                      as.vector(regexpr(pattern ='_',SigGeneSets_Combined$pathway))+1,
+                                      nchar(SigGeneSets_Combined$pathway))
+SigGeneSets_Combined$GeneSet = str_replace_all(SigGeneSets_Combined$GeneSet, '_',' ')
+
+SigGeneSets_Combined$FactorNum = paste0('0', substr(SigGeneSets_Combined$k,7,nchar(SigGeneSets_Combined$k)))
+SigGeneSets_Combined$FactorNum = substr(SigGeneSets_Combined$FactorNum,
+                                        nchar(SigGeneSets_Combined$FactorNum)-1,
+                                        nchar(SigGeneSets_Combined$FactorNum))
+SigGeneSets_Combined$FactorMethod = substr(SigGeneSets_Combined$Method,1,4)
+SigGeneSets_Combined$FactorMethodNum = paste0(SigGeneSets_Combined$FactorMethod,'_',SigGeneSets_Combined$FactorNum)
+
+## remove genesets whose names are too long to plot
+SigGeneSets_Combined = SigGeneSets_Combined[nchar(SigGeneSets_Combined$GeneSet)<80,]
+
+
+## 
+## export for orsum
+##
+
+### loop to export txt files
+
+GroupsToExport = c('Normal_vs_ALL')
+
+for (grp in GroupsToExport){
+  SigGeneSets_grp = SigGeneSets_Combined[SigGeneSets_Combined$Groups==grp,]
+  SCsToExport = unique(SigGeneSets_grp$subcategory)
+  for (SC in SCsToExport){
+    SigGeneSets_grp_SC = SigGeneSets_grp[SigGeneSets_grp$subcategory==SC,]
+    FactorsToExport = unique(SigGeneSets_grp_SC$FactorMethodNum)
+    for (Fct in FactorsToExport){
+      SigGeneSets_grp_SC_Fct = SigGeneSets_grp_SC[SigGeneSets_grp_SC$FactorMethodNum==Fct,]
+      SigGeneSets_grp_SC_Fct = SigGeneSets_grp_SC_Fct[order(SigGeneSets_grp_SC_Fct$padj,
+                                                            SigGeneSets_grp_SC_Fct$size),]
+      SigGeneSets_grp_SC_Fct = SigGeneSets_grp_SC_Fct$pathway
+      write.table(SigGeneSets_grp_SC_Fct,
+                  file.path('orsum',paste0(grp,'_',str_replace(SC, ':','_'),'_',Fct,'.txt')),
+                  col.names = FALSE, row.names = FALSE)
+    }
+  }
+}
+
+## import and tidy gmt files
+
+gmt_inputs = c('c2.cp.kegg_legacy.v2024.1.Hs.symbols.gmt',
+               'c2.cp.reactome.v2024.1.Hs.symbols.gmt',
+               'c5.go.bp.v2024.1.Hs.symbols.gmt',
+               'c5.go.cc.v2024.1.Hs.symbols.gmt')
+
+for (gmt_iput in gmt_inputs){
+  
+  gmt_in  = GSA.read.gmt(file.path('orsum',gmt_iput))
+  gmt_in$geneset.descriptions = substr(gmt_in$geneset.descriptions,
+                                       as.vector(regexpr(pattern ='_',
+                                                         gmt_in$geneset.descriptions))+1,
+                                       nchar(gmt_in$geneset.descriptions))
+  # gmt_in$geneset.descriptions = str_replace_all(gmt_in$geneset.descriptions, '_',' ')
+  gmt_out_rows = length(gmt_in$genesets)
+  gmt_out_cols = max(do.call('rbind',lapply(gmt_in$genesets,length)))+2
+  gmt_out = matrix('',nrow=gmt_out_rows,ncol=gmt_out_cols)
+  gmt_out[,1] = gmt_in$geneset.names
+  gmt_out[,2] = gmt_in$geneset.descriptions
+  for (i in 1:gmt_out_rows){
+    for (j in 1:length(gmt_in$genesets[[i]])){
+      gmt_out[i,j+2] = gmt_in$genesets[[i]][j]
+    }
+  }
+  
+  write.table(gmt_out, file.path('orsum',paste0('adj_',gmt_iput)),
+              sep = "\t", quote = FALSE,
+              col.names = FALSE, row.names = FALSE)
+  
+}
+
+
+
+
+
+
+
+

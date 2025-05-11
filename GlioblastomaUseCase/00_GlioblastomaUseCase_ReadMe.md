@@ -16,3 +16,4 @@ The following scripts were used to carry out use case application of MOTL and co
 
 [06_Trg_MOTL.R](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/06_Trg_MOTL.R): This file contains the workflow for pre-processing the target dataset before MOTL factorization, appplication of MOTL, investigating the MOTL factorization, and comparison with the MOFA factorization
 
+[07_orsumCommands.txt](https://github.com/david-hirst/MOTL/blob/main/GlioblastomaUseCase/07_orsumCommands.txt): This file contains the instructions for creating GSEA plots using the orsum python package

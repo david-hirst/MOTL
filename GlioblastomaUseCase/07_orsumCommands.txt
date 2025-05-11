@@ -1,0 +1,24 @@
+## example command for orsum
+
+orsum.py --gmt 'hsapiens.REAC.name.gmt' --files 'Enrichment-Method1-Reac.txt' 'Enrichment-Method2-Reac.txt' 'Enrichment-Method3-Reac.txt' --fileAliases 'Method 1' 'Method 2' 'Method 3' --outputFolder 'OutputReac' --maxRepSize 2000 --maxTermSize 3000 --minTermSize 20 --numberOfTermsToPlot 20
+
+
+############## commands to run orsum on all vs normal
+
+## kegg
+
+orsum.py --gmt 'adj_c2.cp.kegg_legacy.v2024.1.Hs.symbols.gmt' --files 'Normal_vs_ALL_CP_KEGG_MOFA_01.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_01.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_02.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_05.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_06.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_26.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_39.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_40.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_48.txt' 'Normal_vs_ALL_CP_KEGG_MOTL_63.txt' --fileAliases 'MOFA_01' 'MOTL_01' 'MOTL_02' 'MOTL_05' 'MOTL_06' 'MOTL_26' 'MOTL_39' 'MOTL_40' 'MOTL_48' 'MOTL_63' --outputFolder 'KEGGresults' --maxRepSize 2000 --maxTermSize 3000 --minTermSize 15 --numberOfTermsToPlot 30
+
+## reactome
+
+orsum.py --gmt 'adj_c2.cp.reactome.v2024.1.Hs.symbols.gmt' --files 'Normal_vs_ALL_CP_REACTOME_MOFA_01.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_01.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_02.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_05.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_06.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_25.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_26.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_39.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_40.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_43.txt' 'Normal_vs_ALL_CP_REACTOME_MOTL_48.txt' --fileAliases 'MOFA_01' 'MOTL_01' 'MOTL_02' 'MOTL_05' 'MOTL_06' 'MOTL_25' 'MOTL_26' 'MOTL_39' 'MOTL_40' 'MOTL_43' 'MOTL_48' --outputFolder 'REACTOMEresults' --maxRepSize 2000 --maxTermSize 3000 --minTermSize 15 --numberOfTermsToPlot 30
+
+## BPs
+
+orsum.py --gmt 'adj_c5.go.bp.v2024.1.Hs.symbols.gmt' --files 'Normal_vs_ALL_GO_BP_MOFA_01.txt' 'Normal_vs_ALL_GO_BP_MOTL_01.txt' 'Normal_vs_ALL_GO_BP_MOTL_02.txt' 'Normal_vs_ALL_GO_BP_MOTL_05.txt' 'Normal_vs_ALL_GO_BP_MOTL_06.txt' 'Normal_vs_ALL_GO_BP_MOTL_25.txt' 'Normal_vs_ALL_GO_BP_MOTL_26.txt' 'Normal_vs_ALL_GO_BP_MOTL_39.txt' 'Normal_vs_ALL_GO_BP_MOTL_40.txt' 'Normal_vs_ALL_GO_BP_MOTL_43.txt' 'Normal_vs_ALL_GO_BP_MOTL_48.txt' 'Normal_vs_ALL_GO_BP_MOTL_63.txt' --fileAliases 'MOFA_01' 'MOTL_01' 'MOTL_02' 'MOTL_05' 'MOTL_06' 'MOTL_25' 'MOTL_26' 'MOTL_39' 'MOTL_40' 'MOTL_43' 'MOTL_48' 'MOTL_63' --outputFolder 'BPresults' --maxRepSize 2000 --maxTermSize 3000 --minTermSize 15 --numberOfTermsToPlot 30
+
+
+## CCs
+
+orsum.py --gmt 'adj_c5.go.cc.v2024.1.Hs.symbols.gmt' --files 'Normal_vs_ALL_GO_CC_MOFA_01.txt' 'Normal_vs_ALL_GO_CC_MOTL_01.txt' 'Normal_vs_ALL_GO_CC_MOTL_02.txt' 'Normal_vs_ALL_GO_CC_MOTL_05.txt' 'Normal_vs_ALL_GO_CC_MOTL_06.txt' 'Normal_vs_ALL_GO_CC_MOTL_25.txt' 'Normal_vs_ALL_GO_CC_MOTL_26.txt' 'Normal_vs_ALL_GO_CC_MOTL_39.txt' 'Normal_vs_ALL_GO_CC_MOTL_40.txt' 'Normal_vs_ALL_GO_CC_MOTL_43.txt' 'Normal_vs_ALL_GO_CC_MOTL_48.txt' 'Normal_vs_ALL_GO_CC_MOTL_63.txt' --fileAliases 'MOFA_01' 'MOTL_01' 'MOTL_02' 'MOTL_05' 'MOTL_06' 'MOTL_25' 'MOTL_26' 'MOTL_39' 'MOTL_40' 'MOTL_43' 'MOTL_48' 'MOTL_63' --outputFolder 'CCresults' --maxRepSize 2000 --maxTermSize 3000 --minTermSize 15 --numberOfTermsToPlot 30
+
