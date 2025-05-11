@@ -3,11 +3,6 @@ title: "FctrznEvaluation"
 output: html_document
 ---
 
-
-```{r}
-.libPaths("/home/david/R/x86_64-pc-linux-gnu-library/4.2")
-```
-
 This script is for evaluating factorizations and comparing them with respect to uncovering underlying matrices. It loops through simulation configurations and instances.
 For each configuration it outputs an rds file with evaluation metrics
 
@@ -29,6 +24,7 @@ library(gridExtra)
 library(scales)
 library(knitr)
 library(kableExtra)
+library(mogsa)
 ```
 
 
@@ -43,13 +39,22 @@ set.seed(Seed)
 BaseDir = getwd() # or change it to somewhere else
 
 Configs = c(
-  "SimConfig1"
+  "SimConfig3",
+  "SimConfig3K",
+  "SimConfig3Zsd",
+  "SimConfig4",
+  "SimConfig4K",
+  "SimConfig4Zsd"
   )
 
 scale_views = 'False'
 center_groups = 'True'
 FactorSelection = 'ActiveK'
-FctrznMethods = c('Direct_Trg', 'TL_VI', 'Random')
+FctrznMethods = c('Direct_Trg', 'TL_VI', 'Random','IntNMF', 'MoCluster',
+                  'TL_VI_permute_0', 'TL_VI_permute_10', 'TL_VI_permute_20', 'TL_VI_permute_30',
+                  'TL_VI_permute_40', 'TL_VI_permute_50', 'TL_VI_permute_60', 'TL_VI_permute_70',
+                  'TL_VI_permute_80', 'TL_VI_permute_90', 'TL_VI_permute_100'
+                  )
 
 FeatWseScl = TRUE ## if TRUE then weight vectors scaled featurewise, otherwise factorwise
 # ScaleW = function(x) {x/max(abs(x),na.rm = TRUE)} ## function for scaling weight vectors
@@ -92,6 +97,8 @@ for (Config in Configs){
   score = numeric()
   
   for (sim in 1:Sims-1){
+    
+    print(paste0("sim",sim))
     
     # directory for each simulation
     SimDir = file.path(SimsDir,paste0("sim",sim))
@@ -160,13 +167,13 @@ for (Config in Configs){
         FctrznTrg_W_Fit = FctrznTrg@expectations$W
         FctrznTrg_Z = FctrznTrg@expectations$Z$group0[IfLrn==0,]
         FitSeconds = sum(FctrznTrg@training_stats$time)
-        
-      } else if (fm=='TL_VI'){
+      
+        } else if (substr(fm,1,5)=='TL_VI'){  
         
         FctrznsTrgDir = file.path(InputDir,
                          paste0("TL","_scale_",
                                 scale_views,"_center_",center_groups,"_",
-                                FactorSelection,"_VI"))
+                                FactorSelection,substr(fm,3,nchar(fm))))
         FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
         
         FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_VI_data.rds"))
@@ -175,19 +182,38 @@ for (Config in Configs){
         FctrznTrg_Z = FctrznTrg$ZMu
         FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
         
-      } else if (fm=='TL_VI_C'){
         
-        FctrznsTrgDir = file.path(InputDir,
-                         paste0("TL","_scale_",
-                                scale_views,"_center_",center_groups,"_",
-                                FactorSelection,"_VI_C"))
-        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("TL",sim))
+        } else if (fm=='IntNMF'){  
         
-        FctrznTrg = readRDS(file.path(FctrznTrgDir,"TL_VI_data.rds"))
+        FctrznsTrgDir = file.path(InputDir,"Fctrzn_Trg_IntNMF")
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("Fctrzn",sim))
+        
+        FctrznTrg = readRDS(file.path(FctrznTrgDir,"IntNMF_data.rds"))
         FTrgVarKp = FctrznTrg$TrgKp
-        FctrznTrg_W_Fit = FctrznTrg$Fctrzn_Lrn_W_fltrd
-        FctrznTrg_Z = FctrznTrg$ZMu
+        FctrznTrg_W_Fit = FctrznTrg$IntNMF_fctrzn$H
+        for (m in 1:M){
+          FctrznTrg_W_Fit[[m]] = t(FctrznTrg_W_Fit[[m]])
+        }
+        FctrznTrg_Z = FctrznTrg$IntNMF_fctrzn$W
         FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
+        
+        
+        } else if (fm=='MoCluster'){  
+        
+        FctrznsTrgDir = file.path(InputDir,"Fctrzn_Trg_MoCluster")
+        FctrznTrgDir = file.path(FctrznsTrgDir,paste0("Fctrzn",sim))
+        
+        FctrznTrg = readRDS(file.path(FctrznTrgDir,"MoCluster_data.rds"))
+        FTrgVarKp = FctrznTrg$TrgKp
+        DinM = as.vector(FctrznTrg$MoCluster_fctrzn@tab.dim[1,])
+        DinMCumul = cumsum(DinM)
+        FctrznTrg_W_Fit = vector("list")
+        for (m in 1:M){
+          FctrznTrg_W_Fit[[m]] = moaCoef(FctrznTrg$MoCluster_fctrzn)$coefMat[(DinMCumul[m]-DinM[m]+1):(DinMCumul[m]),]
+        }
+        FctrznTrg_Z = moaScore(FctrznTrg$MoCluster_fctrzn)
+        FitSeconds = as.numeric(difftime(FctrznTrg$fit_end_time,FctrznTrg$fit_start_time, units="secs"))
+        
         
       } else if (fm=='Random'){
         
@@ -367,6 +393,8 @@ for (Config in Configs){
   invisible(gc())
 
 }
+
+print("finished")
 ```
 
 

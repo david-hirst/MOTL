@@ -17,6 +17,12 @@ These are the scripts for reproducing the simulation study, listed in the order 
 
 [06_TL_VI.Rmd](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/06_TL_VI.Rmd): This loops through simulation configurations and instances and performs transfer learning with variational inference
 
+[06b_TL_VI_permute.Rmd](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/06b_TL_VI_permute.Rmd): This loops through simulation configurations and instances and performs transfer learning with variational inference after permuting the values in proportions of the vectors in the W matrix inferred from L
+
+[06c_intNMF.Rmd](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/06c_intNMF.Rmd): This loops through simulation configurations and instances and factorizes the target dataset with IntNMF
+
+[06d_MoCluster.Rmd](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/06d_MoCluster.Rmd): This loops through simulation configurations and instances and factorizes the target dataset with MoCluster
+
 [07_FctrznEvaluation.Rmd](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/07_FctrznEvaluation.Rmd): This loops through each simulation configuration, instance and factorization and calculates some evaluation metrics. An rds file is outputted for each simulation configuration
 
 [08_FctrznEvaluationCmbnd.Rmd](https://github.com/david-hirst/MOTL/blob/main/SimulationStudy/08_FctrznEvaluationCmbnd.Rmd): This loops through simulation configurations and combines all the factorization evaluation scores into a single data frame. This is used for plotting and chekcing statistical significance

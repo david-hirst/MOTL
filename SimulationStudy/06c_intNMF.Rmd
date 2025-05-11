@@ -1,0 +1,145 @@
+---
+title: "06c_intNMF"
+output: html_document
+---
+
+The purpose of this script is to factorize small target datasets with intNMF for benchmarking purposes
+
+```{r}
+library(rjson)
+library(InterSIM)
+```
+
+set up directories and parameters
+
+```{r}
+
+Seed = 1234567
+mode(Seed) = 'integer'
+set.seed(Seed)
+
+BaseDir = getwd() # or change it to somewhere else
+
+Configs = c(
+  "SimConfig3",
+  "SimConfig3K",
+  "SimConfig3Zsd",
+  "SimConfig4",
+  "SimConfig4K",
+  "SimConfig4Zsd"
+  )
+```
+
+
+loop through simulation configurations and iterations to factorize target datasets
+
+```{r}
+for (Config in Configs){
+  
+  print(Config)
+  
+  InputDir = file.path(BaseDir, Config)
+  
+  FctrznsDir = file.path(InputDir,"Fctrzn_Trg_IntNMF")
+  if (!dir.exists(FctrznsDir)){
+    dir.create(FctrznsDir)
+  }
+  
+  # Import metadata related to simulations and factorizations
+  
+  SimMeta = fromJSON(file = file.path(InputDir,"sim_meta.json"))
+  M = length(SimMeta$D)
+  YDists = SimMeta$YDists
+  Sims = SimMeta$Sims
+  
+  ActiveK = as.vector(read.csv(file.path(InputDir,"ActiveKTrg.csv"),header = FALSE)$V1)
+  
+  for (sim in 1:Sims-1){
+    
+    print(paste0("sim_",sim))
+    
+    # simulation, factorization and transfer learning directories
+    SimDir = file.path(InputDir,"SimData",paste0("sim",sim))
+    FctrznDir = file.path(FctrznsDir,paste0("Fctrzn",sim))
+    if (!dir.exists(FctrznDir)){
+      dir.create(FctrznDir)
+    }
+    
+    # load feature variances for filtering datasets
+    
+    FVarTrg = vector("list")
+    for (i in 1:M-1){
+      FVarTrg[[i+1]] = as.vector(read.csv(file.path(SimDir,paste0("FVarTrgY",i,".csv")),header = FALSE)$V1)
+    }
+    
+    TrgKp = vector("list")
+    for (i in 1:M){
+      TrgKp[[i]] = (FVarTrg[[i]] > 0)
+    }
+    
+    # load simulated data for the target set
+    # filter to include target set samples and features to be retained
+    
+    IfLrn = read.csv(file.path(SimDir,"IfLrn.csv"),header=FALSE)
+    IfLrn = as.vector(IfLrn$V1)
+    
+    SimY = vector("list")
+    for (i in 1:M-1){
+      SimY[[i+1]] = read.csv(file.path(SimDir,paste0("Y",i,".csv")),header = FALSE)
+      SimY[[i+1]] = as.matrix(SimY[[i+1]])
+      SimY[[i+1]] = SimY[[i+1]][IfLrn==0,TrgKp[[i+1]]]
+    }
+    
+    # transform to make non negative values
+    
+    Trg_shift = vector("list")
+    for (i in 1:M){
+      Trg_shift[[i]] = as.vector(colMeans(SimY[[i]]))
+      Trg_shift[[i]] = as.vector(apply(SimY[[i]],2,"min"))
+    }
+    
+    SimY_trnsfm = vector("list")
+    for (i in 1:M){
+      SimY_trnsfm[[i]] = sweep(SimY[[i]],2,Trg_shift[[i]],"-")
+    }
+    
+    ## get scaling factors as per the article
+    Trg_scale = numeric()
+    for (i in 1:M){
+      Trg_scale = c(Trg_scale,
+                    mean((SimY[[i]] - mean(SimY[[i]]))^2)
+                    )
+    }
+    Trg_scale = max(Trg_scale)/Trg_scale
+    
+    ## what to put for k
+    KtoUse = min(ActiveK[sim+1], sum(1-IfLrn))
+    
+    ## factorize the target dataset with IntNMF
+    fit_start_time = Sys.time()
+    
+    IntNMF_fctrzn = IntNMF::nmf.mnnals(
+      dat = SimY_trnsfm,
+      k = KtoUse, 
+      wt = Trg_scale
+    )
+    
+    fit_end_time = Sys.time()
+    
+    # export the data used in the fit
+  IntNMF_data = list(
+    "TrgKp" = TrgKp,
+    "KtoUse" = KtoUse,
+    "IntNMF_fctrzn" = IntNMF_fctrzn,
+    "fit_start_time" = fit_start_time,
+    "fit_end_time" = fit_end_time
+  )
+  
+  saveRDS(IntNMF_data,file.path(FctrznDir,"IntNMF_data.rds"))
+    
+  }
+}
+
+print("finished")
+```
+

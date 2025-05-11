@@ -1,0 +1,126 @@
+---
+title: "06d_MoCluster"
+output: html_document
+---
+
+The purpose of this script is to factorize small target datasets with intNMF for benchmarking purposes
+
+```{r}
+library(rjson)
+library(mogsa)
+```
+
+set up directories and parameters
+
+```{r}
+
+Seed = 1234567
+mode(Seed) = 'integer'
+set.seed(Seed)
+
+BaseDir = getwd() # or change it to somewhere else
+
+Configs = c(
+  "SimConfig3",
+  "SimConfig3K",
+  "SimConfig3Zsd",
+  "SimConfig4",
+  "SimConfig4K",
+  "SimConfig4Zsd"
+  )
+```
+
+
+loop through simulation configurations and iterations to factorize target datasets
+
+```{r}
+for (Config in Configs){
+  
+  print(Config)
+  
+  InputDir = file.path(BaseDir, Config)
+  
+  FctrznsDir = file.path(InputDir,"Fctrzn_Trg_MoCluster")
+  if (!dir.exists(FctrznsDir)){
+    dir.create(FctrznsDir)
+  }
+  
+  # Import metadata related to simulations and factorizations
+  
+  SimMeta = fromJSON(file = file.path(InputDir,"sim_meta.json"))
+  M = length(SimMeta$D)
+  YDists = SimMeta$YDists
+  Sims = SimMeta$Sims
+  
+  ActiveK = as.vector(read.csv(file.path(InputDir,"ActiveKTrg.csv"),header = FALSE)$V1)
+  
+  for (sim in 1:Sims-1){
+    
+    print(paste0("sim_",sim))
+    
+    # simulation, factorization and transfer learning directories
+    SimDir = file.path(InputDir,"SimData",paste0("sim",sim))
+    FctrznDir = file.path(FctrznsDir,paste0("Fctrzn",sim))
+    if (!dir.exists(FctrznDir)){
+      dir.create(FctrznDir)
+    }
+    
+    # load feature variances for filtering datasets
+    
+    FVarTrg = vector("list")
+    for (i in 1:M-1){
+      FVarTrg[[i+1]] = as.vector(read.csv(file.path(SimDir,paste0("FVarTrgY",i,".csv")),header = FALSE)$V1)
+    }
+    
+    TrgKp = vector("list")
+    for (i in 1:M){
+      TrgKp[[i]] = (FVarTrg[[i]] > 0)
+    }
+    
+    # load simulated data for the target set
+    # filter to include target set samples and features to be retained
+    
+    IfLrn = read.csv(file.path(SimDir,"IfLrn.csv"),header=FALSE)
+    IfLrn = as.vector(IfLrn$V1)
+    
+    SimY = vector("list")
+    for (i in 1:M-1){
+      SimY[[i+1]] = read.csv(file.path(SimDir,paste0("Y",i,".csv")),header = FALSE)
+      SimY[[i+1]] = as.matrix(SimY[[i+1]])
+      SimY[[i+1]] = SimY[[i+1]][IfLrn==0,TrgKp[[i+1]]]
+      SimY[[i+1]] = t(SimY[[i+1]])
+    }
+    
+    
+    ## what to put for k
+    KtoUse = min(ActiveK[sim+1], sum(1-IfLrn))
+    
+    ## factorize the target dataset with MoCluster
+    fit_start_time = Sys.time()
+    
+    MoCluster_fctrzn = mogsa::mbpca(
+      x = SimY,
+      ncomp = KtoUse, 
+      method = "blockLoading",
+      scale=TRUE
+    )
+    
+    fit_end_time = Sys.time()
+    
+    # export the data used in the fit
+  MoCluster_data = list(
+    "TrgKp" = TrgKp,
+    "KtoUse" = KtoUse,
+    "MoCluster_fctrzn" = MoCluster_fctrzn,
+    "fit_start_time" = fit_start_time,
+    "fit_end_time" = fit_end_time
+  )
+  
+  saveRDS(MoCluster_data,file.path(FctrznDir,"MoCluster_data.rds"))
+    
+  }
+}
+
+print("finished")
+```
+

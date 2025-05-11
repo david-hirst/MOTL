@@ -4,13 +4,6 @@ output: html_document
 ---
 
 
-Point to correct package library?
-
-```{r}
-.libPaths("/home/david/R/x86_64-pc-linux-gnu-library/4.2")
-```
-
-
 Import results from various configurations to produce summary plots and tables
 Also there is code at the bottom to check for statistically significant differences in evaluation scores
 
@@ -38,7 +31,12 @@ Results to import
 BaseDir = getwd() # or change it to somewhere else
 
 Configs = c(
-  "SimConfig1"
+  "SimConfig3",
+  "SimConfig3K",
+  "SimConfig3Zsd",
+  "SimConfig4",
+  "SimConfig4K",
+  "SimConfig4Zsd"
   )
 
 ```
@@ -120,30 +118,26 @@ table(EvaluationsDF$fctrzn_type)
 ```
 
 
-Boxplots for F1 scores - all configs, excluding MCMC scores
+Boxplots for F1 scores - all configs
 
 ```{r}
 PlotScore = "F1"
 
 DFToPlot = EvaluationsDF[EvaluationsDF$score_name==PlotScore 
-                         & EvaluationsDF$fctrzn_type != "Random_TL"
+                         # & is.element(EvaluationsDF$fctrzn_type, c("Direct", "MOTL", "IntNMF", "MoCluster" ))
+                         & is.element(EvaluationsDF$fctrzn_type, c("Direct", "MOTL" ))
                          & EvaluationsDF$M == 3
                          & EvaluationsDF$D==2000
                          ,]
 
-DFToPlot$fctrzn_grp = DFToPlot$fctrzn_type
-DFToPlot$fctrzn_grp[!is.element(DFToPlot$fctrzn_grp,c("Direct","Random_TL"))]="other"
-
-DFToPlot$fctrzn_grp = as.factor(DFToPlot$fctrzn_grp)
-DFToPlot$fctrzn_type = as.factor(DFToPlot$fctrzn_type)
-DFToPlot$fctrzn_type = relevel(DFToPlot$fctrzn_type, ref = "Direct")
+DFToPlot$fctrzn_type = factor(DFToPlot$fctrzn_type, levels = c("Direct", "MOTL", "IntNMF", "MoCluster"))
 
 DFToPlot$D = paste0('D: ',DFToPlot$D)
 DFToPlot$K = paste0('K: ',DFToPlot$K)
 DFToPlot$Zsd = paste0('sd: ',format(DFToPlot$Zsd,nsmall=1))
 DFToPlot$CLrn = paste0('Learning Groups: ',DFToPlot$CLrn)
 
-ggplot(DFToPlot, aes(x=fctrzn_type, y=score_adj, fill=fctrzn_grp))+ 
+ggplot(DFToPlot, aes(x=fctrzn_type, y=score_adj, fill=fctrzn_type))+ 
   ylab(PlotScore) +
   xlab("") +
   # geom_violin() +
@@ -167,7 +161,83 @@ ggsave(
   file.path(BaseDir,paste0(PlotScore,"Plots.pdf")),
        width = 15, height = 10, units = "cm"
   )
+ggsave(
+  file.path(BaseDir,paste0(PlotScore,"Plots.png")),
+       width = 15, height = 10, units = "cm"
+  )
 ```
+
+Line graphs of average F1 scores for MOTL based on permuted W matrices
+
+```{r}
+PlotScore = "F1"
+
+DFToPlot = EvaluationsDF[EvaluationsDF$score_name==PlotScore 
+                         & is.element(EvaluationsDF$fctrzn_type, 
+                                      c("Direct",
+                                        "TL_VI_permute_0", "TL_VI_permute_10", "TL_VI_permute_20",
+                                        "TL_VI_permute_30", "TL_VI_permute_40", "TL_VI_permute_50",
+                                        "TL_VI_permute_60", "TL_VI_permute_70", "TL_VI_permute_80",
+                                        "TL_VI_permute_90", "TL_VI_permute_100"
+                                        ))
+                         & EvaluationsDF$M == 3
+                         & EvaluationsDF$D==2000
+                         ,]
+
+DFToPlot$D = paste0('D: ',DFToPlot$D)
+DFToPlot$K = paste0('K: ',DFToPlot$K)
+DFToPlot$Zsd = paste0('sd: ',format(DFToPlot$Zsd,nsmall=1))
+DFToPlot$CLrn = paste0('Learning Groups: ',DFToPlot$CLrn)
+
+DFToPlot = do.call(data.frame, 
+                       aggregate(score_adj ~ K+Zsd+CLrn+fctrzn_type, 
+                               DFToPlot,
+                               FUN = "mean")
+                     )
+
+DFToPlot_TL = DFToPlot[substr(DFToPlot$fctrzn_type,1,13)=="TL_VI_permute",]
+DFToPlot_TL$Permuted = as.numeric(substr(DFToPlot_TL$fctrzn_type,15,nchar(DFToPlot_TL$fctrzn_type)))/100
+DFToPlot_TL$fctrzn_type = 'MOTL'
+
+DFToPlot_Direct = DFToPlot[DFToPlot$fctrzn_type=="Direct",]
+
+DFToPlot <- merge(x=DFToPlot_TL, 
+                  y=DFToPlot_Direct, 
+                  by=c("K","Zsd", "CLrn"), all.x=TRUE)
+
+ggplot(DFToPlot, aes(x=Permuted, y=score_adj.x, colour = fctrzn_type.x))+ 
+  ylab("Average F1 score") +
+  xlab("Proportion of feature vectors permuted") +
+  geom_point(color = RColorBrewer::brewer.pal(3, "Set2")[2]) +
+  geom_line(color = RColorBrewer::brewer.pal(3, "Set2")[2], linewidth=0.8) +
+  facet_grid(K+Zsd~CLrn, scales = 'fixed') +
+  theme_bw()+
+  theme(
+    axis.title.x = element_text(size=6),
+    axis.title.y = element_text(size=6),
+    axis.text.x = element_text(size=6),
+    axis.text.y = element_text(size=6),
+    strip.text.x = element_text(size=6),
+    strip.text.y = element_text(angle = 0, size=6),
+    legend.position="none",
+    panel.grid.major=element_blank(),
+    panel.grid.minor=element_blank()
+    )+
+  geom_hline(aes(yintercept = score_adj.y), linetype = 'dashed',
+             color = RColorBrewer::brewer.pal(3, "Set2")[1]) 
+ggsave(
+  file.path(BaseDir,paste0(PlotScore,"PermutedPlots.pdf")),
+       width = 15, height = 10, units = "cm"
+  )
+ggsave(
+  file.path(BaseDir,paste0(PlotScore,"PermutedPlots.png")),
+       width = 15, height = 10, units = "cm"
+  )
+  
+  
+```
+
+
 
 Scatter plots - Precision vs Recall vs # Inferred positives?
 
@@ -186,8 +256,8 @@ DFToScatterPlot = data.frame(
 )
 
 DFToScatterPlot = DFToScatterPlot[DFToScatterPlot$M == 3
-                                  & EvaluationsDF$D==2000
-                                  & DFToScatterPlot$fctrzn_type != "Random_TL"
+                                  & DFToScatterPlot$D==2000
+                                  & is.element(DFToScatterPlot$fctrzn_type, c("MOTL", "Direct"))
                                   ,]
 
 DFToScatterPlotWide = reshape(
@@ -279,7 +349,8 @@ Fit a gls model with nlme
 PlotScore = "F1"
 
 DFToFit = EvaluationsDF[EvaluationsDF$score_name==PlotScore 
-                        & EvaluationsDF$fctrzn_type != "Random_TL"
+                        # & EvaluationsDF$fctrzn_type != "Random_TL"
+                        & is.element(EvaluationsDF$fctrzn_type, c("MOTL", "Direct"))
                          & EvaluationsDF$M == 3
                          & EvaluationsDF$D==2000
                          ,]
