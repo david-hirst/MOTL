@@ -1,10 +1,6 @@
-##########################
-#### Factorization evaluation summary
-###########################
-
-# The purpose of this script is to summarize the evaluation metrics calculated for factorizations of TCGA TARGET datasets
-# Plots and summary tables are created
-# generalized least squares is used to assess the statistical significance of differences between factorization methods
+############
+#### PLot factorization results
+##################
 
 ## libraries
 library(ggplot2)
@@ -29,6 +25,7 @@ FctrznEvaluationResults = FctrznEvaluation$FctrznEvaluationResults
 FctrznEvaluationResults$fctrzn_method[FctrznEvaluationResults$fctrzn_method=="TL_VI"]="MOTL"
 FctrznEvaluationResults$score_name[FctrznEvaluationResults$score_name=="Z_FMeasure"]="FM_Z"
 FctrznEvaluationResults$score_name[FctrznEvaluationResults$score_name=="W_FMeasure"]="FM_W"
+FctrznEvaluationResults$fctrzn_method[FctrznEvaluationResults$fctrzn_method=="Direct"]="Direct (MOFA)"
 
 ## tables of means
 score_sum = FctrznEvaluationResults[is.element(FctrznEvaluationResults$score_name,
@@ -37,8 +34,8 @@ score_sum = FctrznEvaluationResults[is.element(FctrznEvaluationResults$score_nam
                                           'FM_Z', 'FM_W',
                                           'GT_positives', 'Inf_positives', 'True_positives',
                                           'Precision', 'Recall', 'F1')) &
-                                          is.element(FctrznEvaluationResults$fctrzn_method,
-                                        c('Direct','MOTL')) &
+                                          # is.element(FctrznEvaluationResults$fctrzn_method, c('Direct','MOTL')) &
+                                          is.element(FctrznEvaluationResults$fctrzn_method, c('Direct (MOFA)','MOTL')) &
                                           is.element(FctrznEvaluationResults$prjct_name,
                                         c('LAML_PAAD','LAML_SKCM','PAAD_SKCM','LAML_PAAD_SKCM')),] %>%
   dplyr::group_by(prjct_name, score_name, fctrzn_method) %>%
@@ -79,7 +76,8 @@ PlotNames = c('Combined', 'FM', 'F1')
 PlotHeights = c(10, 10, 10)
 PlotWidths = c(10, 10, 7.5)
 
-PlotMethods = c('Direct', 'MOTL')
+# PlotMethods = c('Direct', 'MOTL')
+PlotMethods = c('Direct (MOFA)', 'MOTL', 'MoCluster', 'IntNMF')
 
 for (ps in 1:length(PlotScoresLS)){
 
@@ -95,14 +93,12 @@ for (ps in 1:length(PlotScoresLS)){
       is.element(FctrznEvaluationResults$fctrzn_method,PlotMethods)
     ,]
   
-  # groupings and factors for colours and ordering
-  DFToPlot$fctrzn_grp = DFToPlot$fctrzn_method
-  DFToPlot$fctrzn_grp[!is.element(DFToPlot$fctrzn_grp,c('Direct','Random_TL'))]='other'
-  DFToPlot$fctrzn_grp = as.factor(DFToPlot$fctrzn_grp)
-  DFToPlot$fctrzn_method = as.factor(DFToPlot$fctrzn_method)
-  DFToPlot$fctrzn_method = relevel(DFToPlot$fctrzn_method, ref = 'Direct')
+  # factors for colours and ordering
+
+  # DFToPlot$fctrzn_method = factor(DFToPlot$fctrzn_method, levels = c("Direct", "MOTL"))
+  DFToPlot$fctrzn_method = factor(DFToPlot$fctrzn_method, levels = c("Direct (MOFA)", "MOTL", "IntNMF", "MoCluster"))
   
-  ggplot(DFToPlot, aes(x=fctrzn_method, y=score, fill=fctrzn_grp))+ 
+  ggplot(DFToPlot, aes(x=fctrzn_method, y=score, fill=fctrzn_method))+ 
     ylab("") +
     xlab("") +
     geom_violin(lwd=0.25) +
@@ -156,7 +152,8 @@ ScoresToTest = list(
   'W_Relevance' = names(PrjctsToTest)
 )
 
-MethodsToTest = c('Direct', 'MOTL')
+# MethodsToTest = c('Direct', 'MOTL')
+MethodsToTest = c('Direct (MOFA)', 'MOTL')
 
 # loop through scores and project groupings to test
 for (STT in names(ScoresToTest)){
@@ -183,7 +180,8 @@ for (STT in names(ScoresToTest)){
 
     # make the method a factor
     DFToTest$fctrzn_method = as.factor(DFToTest$fctrzn_method)
-    DFToTest$fctrzn_method = relevel(DFToTest$fctrzn_method, ref = "Direct")
+    # DFToTest$fctrzn_method = relevel(DFToTest$fctrzn_method, ref = "Direct")
+    DFToTest$fctrzn_method = relevel(DFToTest$fctrzn_method, ref = "Direct (MOFA)")
 
     # make datset id and project name factors
     DFToTest$ds_id = as.factor(paste0(DFToTest$prjct_name,"_",DFToTest$ss_iteration))
