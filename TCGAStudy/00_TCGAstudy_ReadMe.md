@@ -13,7 +13,9 @@ This folder contains the functions and workflows used to carry out the TCGA eval
 
 [05_TL_VI.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/05_TL_VI.R): This file contains the worflow for applying MOTL to a TCGA target dataset to carry out matrix factorization with transfer learning
 
-[05b_TCGA_MoCluster.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/05b_TCGA_MoCluster.R): This file contains the worflow for applying MoCluster to a TCGA target dataset to carry out matrix factorization
+[05b_TCGA_MoCluster.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/05b_TCGA_MoCluster.R): This file contains the worflow for applying MoCluster to factorize TCGA target datasets
+
+[05c_TCGA_IntNMF.R](https://github.com/david-hirst/MOTL/blob/main/TCGAStudy/05c_TCGA_IntNMF.R): This file contains the worflow for applying IntNMF to factorize TCGA target datasets
 
 ## Workflows for evaluation measures and figures
 NOTE: THE CODE IN THE PREVIOUS SECTION IS AN OPTIMIZED VERSION OF THE CODE WE USED TO CARRY OUT THE TCGA EVALUATION STUDY. THE CODE WE USED FOR EVALUATING THE FACTORIZATIONS IS STILL UNDERGOING THIS PROCESS.
