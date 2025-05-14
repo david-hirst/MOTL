@@ -26,6 +26,8 @@ FctrznEvaluationResults$fctrzn_method[FctrznEvaluationResults$fctrzn_method=="TL
 FctrznEvaluationResults$score_name[FctrznEvaluationResults$score_name=="Z_FMeasure"]="FM_Z"
 FctrznEvaluationResults$score_name[FctrznEvaluationResults$score_name=="W_FMeasure"]="FM_W"
 FctrznEvaluationResults$fctrzn_method[FctrznEvaluationResults$fctrzn_method=="Direct"]="Direct (MOFA)"
+FctrznEvaluationResults$fctrzn_method[FctrznEvaluationResults$fctrzn_method=="IntNMF"]="intNMF"
+FctrznEvaluationResults$fctrzn_method[FctrznEvaluationResults$fctrzn_method=="MoCluster"]="moCluster"
 
 ## tables of means
 score_sum = FctrznEvaluationResults[is.element(FctrznEvaluationResults$score_name,
@@ -77,7 +79,7 @@ PlotHeights = c(10, 10, 10)
 PlotWidths = c(10, 10, 7.5)
 
 # PlotMethods = c('Direct', 'MOTL')
-PlotMethods = c('Direct (MOFA)', 'MOTL', 'MoCluster', 'IntNMF')
+PlotMethods = c('Direct (MOFA)', 'MOTL', 'moCluster', 'intNMF')
 
 for (ps in 1:length(PlotScoresLS)){
 
@@ -96,7 +98,7 @@ for (ps in 1:length(PlotScoresLS)){
   # factors for colours and ordering
 
   # DFToPlot$fctrzn_method = factor(DFToPlot$fctrzn_method, levels = c("Direct", "MOTL"))
-  DFToPlot$fctrzn_method = factor(DFToPlot$fctrzn_method, levels = c("Direct (MOFA)", "MOTL", "IntNMF", "MoCluster"))
+  DFToPlot$fctrzn_method = factor(DFToPlot$fctrzn_method, levels = c("Direct (MOFA)", "MOTL", "intNMF", "moCluster"))
   
   ggplot(DFToPlot, aes(x=fctrzn_method, y=score, fill=fctrzn_method))+ 
     ylab("") +
