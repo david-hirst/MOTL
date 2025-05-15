@@ -111,9 +111,10 @@ Change names if necessary
 
 ```{r}
 EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="TL_VI"]="MOTL"
-EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Direct_Trg"]="Direct"
-# EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Direct_Trg"]="Direct (MOFA)"
-EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Random"]="Random_TL"
+# EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Direct_Trg"]="Direct"
+EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="Direct_Trg"]="Direct (MOFA)"
+EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="IntNMF"]="intNMF"
+EvaluationsDF$fctrzn_type[EvaluationsDF$fctrzn_type=="MoCluster"]="moCluster"
 
 table(EvaluationsDF$fctrzn_type)
 ```
@@ -125,14 +126,14 @@ Boxplots for F1 scores - all configs
 PlotScore = "F1"
 
 DFToPlot = EvaluationsDF[EvaluationsDF$score_name==PlotScore 
-                         & is.element(EvaluationsDF$fctrzn_type, c("Direct", "MOTL" ))
-                         # & is.element(EvaluationsDF$fctrzn_type, c("Direct (MOFA)", "MOTL", "IntNMF", "MoCluster" ))
+                         # & is.element(EvaluationsDF$fctrzn_type, c("Direct", "MOTL" ))
+                         & is.element(EvaluationsDF$fctrzn_type, c("Direct (MOFA)", "MOTL", "intNMF", "moCluster" ))
                          & EvaluationsDF$M == 3
                          & EvaluationsDF$D==2000
                          ,]
 
-DFToPlot$fctrzn_type = factor(DFToPlot$fctrzn_type, levels = c("Direct", "MOTL"))
-# DFToPlot$fctrzn_type = factor(DFToPlot$fctrzn_type, levels = c("Direct (MOFA)", "MOTL", "IntNMF", "MoCluster"))
+# DFToPlot$fctrzn_type = factor(DFToPlot$fctrzn_type, levels = c("Direct", "MOTL"))
+DFToPlot$fctrzn_type = factor(DFToPlot$fctrzn_type, levels = c("Direct (MOFA)", "MOTL", "intNMF", "moCluster"))
 
 DFToPlot$D = paste0('D: ',DFToPlot$D)
 DFToPlot$K = paste0('K: ',DFToPlot$K)
