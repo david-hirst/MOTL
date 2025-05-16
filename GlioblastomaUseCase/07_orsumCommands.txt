@@ -1,8 +1,3 @@
-## example command for orsum
-
-orsum.py --gmt 'hsapiens.REAC.name.gmt' --files 'Enrichment-Method1-Reac.txt' 'Enrichment-Method2-Reac.txt' 'Enrichment-Method3-Reac.txt' --fileAliases 'Method 1' 'Method 2' 'Method 3' --outputFolder 'OutputReac' --maxRepSize 2000 --maxTermSize 3000 --minTermSize 20 --numberOfTermsToPlot 20
-
-
 ############## commands to run orsum on all vs normal
 
 ## kegg
