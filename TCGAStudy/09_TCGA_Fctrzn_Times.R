@@ -24,7 +24,7 @@ SS_size = c(5, 5, 5,
             5) ## how many samples in each sub set
 names(SS_size)=Prjcts
 
-FctrznMethods = c('Direct', 'TL_VI')
+FctrznMethods = c('Direct', 'TL_VI', 'MoCluster', 'IntNMF')
 
 ### 
 ## loop through projects and factorization to record times
@@ -38,7 +38,7 @@ SS_count = integer()
 for (Prjct in Prjcts){
   
   TrgSSDir = paste0('Trg_',Prjct,'_SS',SS_size[Prjct],'_',TopD,'D')
-  TrgSS_meta_data = readRDS(file.path(TrgSSDir,'expdat_meta_SS.rds'))
+  TrgSS_meta_data = readRDS(file.path(TrgSSDir,'expdat_meta.rds'))
   
   for (fm in FctrznMethods){
     
@@ -79,6 +79,20 @@ for (Prjct in Prjcts){
       )
       SS_count = c(SS_count,TrgSS_meta_data$SS_count)
       rm(list=c('TrgSSFctrzn_meta_data'))
+    }
+    if (is.element(fm, c('MoCluster', 'IntNMF'))){
+      for (ss in 1:TrgSS_meta_data$SS_count){
+        SS = paste0('SS_',ss)
+        TrgSSFctrzn_data = readRDS(file.path(TrgSSDir,SS,fm,paste0(fm,'_data.rds')))
+        prjct_name = c(prjct_name,Prjct)
+        fctrzn_method = c(fctrzn_method,fm)
+        fctrzn_seconds = c(fctrzn_seconds, 
+        as.numeric(difftime(TrgSSFctrzn_data$fit_end_time, 
+        TrgSSFctrzn_data$fit_start_time, units="secs"))
+        )
+        SS_count = c(SS_count,TrgSS_meta_data$SS_count)
+        rm(list=c('TrgSSFctrzn_data'))
+      }
     }
   }
   
