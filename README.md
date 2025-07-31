@@ -13,7 +13,7 @@ Overview of MOTL, our transfer learning approach to joint multi-omics matrix fac
  
  **b** : The feature weight, intercept, and precision parameter values, inferred from the factorization of $\boldsymbol{L}$, are incorporated into the factorization of a multi-omics target dataset, $\boldsymbol{T}$, for which MOTL infers a matrix of sample scores, $\boldsymbol{Z}$, with variational inference.
 
-For more detail see the MOTL preprint on [bioRxiv](https://doi.org/10.1101/2024.03.22.586210)
+For more detail see the MOTL paper in [Genome Biology](https://doi.org/10.1186/s13059-025-03675-7)
 
 ## MOTL code repository contents
 
