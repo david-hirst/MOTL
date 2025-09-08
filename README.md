@@ -87,7 +87,7 @@ Record the time that the pre-processing starts
 ss_start_time = Sys.time()
 ```
 
-Start with some or all of the following omics matrix, all with **features in rows** and **samples in columns**. The names of these matrices are not important. The set of column names should be the same for each omics, although the order is not important as they will be ordered automatically. The order of the features is not important, however the type of id used to name the features should be consistant with the TCGA learning dataset, as outlined below.
+Start with some or all of the following omics matrices, all with **features in rows** and **samples in columns**. The names of these matrices are not important. The set of column names should be the same for each omics, although the order is not important as they will be ordered automatically. The order of the features is not important, however the type of id used to name the features should be consistant with the TCGA learning dataset, as outlined below.
 
 **expdat_mRNA**: a matrix of mRNA raw counts, genes in rows, samples in columns. Row names should be Ensemble ids without the version suffix; for example *ENSG00000000005*.
 
