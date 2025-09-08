@@ -97,7 +97,7 @@ Start with some or all of the following omics matrices, all with **features in r
 
 **expdat_SNV**: a binary matrix of SNV mutation absence / presence, genes in rows, samples in columns. Row names should be HGCN symbols; for example *AKAP13*.
 
-In the case of expdat_mRNA, a version suffix will need to be added to be consisant with the naming in the TCGA learning data factorization.
+In the case of expdat_mRNA, a version suffix will need to be added to be consistent with the naming in the TCGA learning data factorization.
 ```
 expdat_mRNA = mRNA_addVersion(expdat = expdat_mRNA, Lrndat = Fctrzn@expectations$W$mRNA)
 ```
